@@ -1,11 +1,86 @@
 import crypto from 'crypto';
 import type { InitializePaymentResponse, VerifyPaymentResponse } from '@/types/payment';
+import { PAYSTACK_FEE } from '@/lib/constants';
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!;
 const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!;
 
 if (!PAYSTACK_SECRET_KEY) {
   throw new Error('Missing PAYSTACK_SECRET_KEY environment variable');
+}
+
+/**
+ * Calculate Paystack transaction fee (Nigeria - NGN)
+ * 
+ * Local transactions: 1.5% + ₦100 (capped at ₦2,000)
+ * - ₦100 fee is waived for transactions under ₦2,500
+ * 
+ * International transactions:
+ * - Mastercard/Visa/Verve: 3.9% + ₦100
+ * - American Express: 4.5%
+ * 
+ * @param amount - Amount in Naira
+ * @param cardType - Type of card: 'local', 'international', or 'amex'
+ * @returns Fee breakdown with total amount to charge
+ */
+export function calculatePaystackFee(
+  amount: number, 
+  cardType: 'local' | 'international' | 'amex' = 'local'
+): {
+  originalAmount: number;
+  fee: number;
+  totalAmount: number;
+  feeDescription: string;
+} {
+  let fee: number;
+  let feeDescription: string;
+
+  if (cardType === 'amex') {
+    // American Express: 4.5%
+    fee = Math.ceil(amount * PAYSTACK_FEE.INTERNATIONAL_AMEX_PERCENTAGE);
+    feeDescription = '4.5%';
+  } else if (cardType === 'international') {
+    // International cards (Mastercard/Visa/Verve): 3.9% + ₦100
+    fee = Math.ceil((amount * PAYSTACK_FEE.INTERNATIONAL_PERCENTAGE) + PAYSTACK_FEE.INTERNATIONAL_FLAT);
+    feeDescription = '3.9% + ₦100';
+  } else {
+    // Local cards: 1.5% + ₦100 (capped at ₦2,000)
+    // ₦100 fee is waived for transactions under ₦2,500
+    const percentageFee = Math.ceil(amount * PAYSTACK_FEE.LOCAL_PERCENTAGE);
+    const flatFee = amount >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
+    
+    fee = percentageFee + flatFee;
+    fee = Math.min(fee, PAYSTACK_FEE.LOCAL_CAP); // Cap at ₦2,000
+    
+    if (amount < PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD) {
+      feeDescription = '1.5% (₦100 fee waived)';
+    } else {
+      feeDescription = '1.5% + ₦100 (capped at ₦2,000)';
+    }
+  }
+
+  return {
+    originalAmount: amount,
+    fee,
+    totalAmount: amount + fee,
+    feeDescription,
+  };
+}
+
+/**
+ * Calculate the amount to charge customer (including fees)
+ * This is what will be sent to Paystack
+ * 
+ * @param rechargeAmount - The amount customer wants to recharge (in Naira)
+ * @param cardType - Type of card: 'local', 'international', or 'amex'
+ * @returns Amount to charge in kobo (including fees)
+ */
+export function calculateChargeAmount(
+  rechargeAmount: number, 
+  cardType: 'local' | 'international' | 'amex' = 'local'
+): number {
+  const { totalAmount } = calculatePaystackFee(rechargeAmount, cardType);
+  return totalAmount * 100; // Convert to kobo
 }
 
 /**

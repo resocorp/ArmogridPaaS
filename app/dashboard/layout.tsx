@@ -6,12 +6,17 @@ import Link from 'next/link';
 import { Zap, LayoutDashboard, Gauge, TrendingUp, Receipt, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useSessionMonitor } from '@/lib/hooks/use-session-monitor';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [username, setUsername] = useState<string>('');
+  
+  // Monitor session for token expiry
+  useSessionMonitor();
 
   useEffect(() => {
     checkAuth();
@@ -23,6 +28,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!response.ok) {
         router.push('/login');
         return;
+      }
+      const data = await response.json();
+      if (data.success && data.data) {
+        setUsername(data.data.username);
       }
       setIsLoading(false);
     } catch (error) {
@@ -78,10 +87,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </Link>
           </div>
 
-          <Button variant="ghost" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />
-            Logout
-          </Button>
+          <div className="flex items-center gap-4">
+            {username && (
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg">
+                <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
+                  <span className="text-sm font-semibold text-primary">
+                    {username.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <span className="text-sm font-medium">{username}</span>
+              </div>
+            )}
+            <Button variant="ghost" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          </div>
         </div>
       </header>
 

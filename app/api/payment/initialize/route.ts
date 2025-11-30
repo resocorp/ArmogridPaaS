@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializePayment, generatePaymentReference } from '@/lib/paystack';
+import { initializePayment, generatePaymentReference, calculatePaystackFee } from '@/lib/paystack';
 import { iotClient } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
@@ -74,16 +74,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate payment reference
+    // Calculate Paystack fees (local cards by default)
+    const feeBreakdown = calculatePaystackFee(amount, 'local');
+    console.log('[Payment Init] Fee calculation:', {
+      rechargeAmount: amount,
+      fee: feeBreakdown.fee,
+      totalAmount: feeBreakdown.totalAmount,
+      feeStructure: feeBreakdown.feeDescription
+    });
+
+    // Generate unique reference
     const reference = generatePaymentReference();
-    const amountKobo = nairaToKobo(amount);
-    console.log('[Payment Init] Generated reference:', reference, 'Amount in kobo:', amountKobo);
+    const rechargeAmountInKobo = nairaToKobo(amount); // Amount to credit to meter
+    const chargeAmountInKobo = nairaToKobo(feeBreakdown.totalAmount); // Amount to charge customer
+    console.log('[Payment Init] Generated reference:', reference);
+    console.log('[Payment Init] Recharge amount (kobo):', rechargeAmountInKobo);
+    console.log('[Payment Init] Charge amount with fees (kobo):', chargeAmountInKobo);
 
     // Create pending transaction in database
     console.log('[Payment Init] Creating transaction record in database...');
     const { error: dbError } = await supabaseAdmin.from('transactions').insert({
       meter_id: meterId,
-      amount_kobo: amountKobo,
+      amount_kobo: rechargeAmountInKobo,
       paystack_reference: reference,
       paystack_status: 'pending',
       customer_email: customerEmail,
@@ -105,11 +117,14 @@ export async function POST(request: NextRequest) {
     console.log('[Payment Init] Initializing Paystack payment...');
     const paymentResponse = await initializePayment(
       customerEmail,
-      amountKobo,
+      chargeAmountInKobo, // Charge customer the total amount including fees
       reference,
       {
         meterId,
         userId,
+        rechargeAmount: amount,
+        paystackFee: feeBreakdown.fee,
+        totalCharged: feeBreakdown.totalAmount,
         custom_fields: [
           {
             display_name: 'Meter ID',

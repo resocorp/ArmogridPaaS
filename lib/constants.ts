@@ -32,10 +32,24 @@ export const PAYMENT_STATUS = {
 } as const;
 
 // Minimum recharge amount (in Naira)
-export const MIN_RECHARGE_AMOUNT = 100;
+export const MIN_RECHARGE_AMOUNT = 500;
 
 // Maximum recharge amount (in Naira)
-export const MAX_RECHARGE_AMOUNT = 1000000;
+export const MAX_RECHARGE_AMOUNT = 5000000;
+
+// Paystack Fee Configuration (Nigeria - NGN)
+// Local transactions: 1.5% + ₦100 (capped at ₦2,000)
+// ₦100 fee is waived for transactions under ₦2,500
+// International: 3.9% + ₦100 (Mastercard/Visa/Verve) or 4.5% (Amex)
+export const PAYSTACK_FEE = {
+  LOCAL_PERCENTAGE: 0.015, // 1.5%
+  LOCAL_FLAT: 100, // ₦100 (waived if amount < ₦2,500)
+  LOCAL_CAP: 2000, // ₦2,000 cap
+  LOCAL_FLAT_THRESHOLD: 2500, // ₦100 fee waived below this amount
+  INTERNATIONAL_PERCENTAGE: 0.039, // 3.9% (Mastercard/Visa/Verve)
+  INTERNATIONAL_FLAT: 100, // ₦100
+  INTERNATIONAL_AMEX_PERCENTAGE: 0.045, // 4.5% (American Express)
+} as const;
 
 // Session cookie name
 export const SESSION_COOKIE_NAME = "armogrid_session";

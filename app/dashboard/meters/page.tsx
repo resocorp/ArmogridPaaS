@@ -1,14 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Gauge, Power, PowerOff, RefreshCw, Zap } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Gauge, Power, PowerOff, RefreshCw, Zap, Wifi, WifiOff } from 'lucide-react';
 import { formatNaira } from '@/lib/utils';
 import { toast } from 'sonner';
+import type { UserMeter } from '@/types/iot';
 
 export default function MetersPage() {
-  const [meters, setMeters] = useState<any[]>([]);
+  const router = useRouter();
+  const [meters, setMeters] = useState<UserMeter[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [controllingMeter, setControllingMeter] = useState<string | null>(null);
 
@@ -17,11 +21,21 @@ export default function MetersPage() {
   }, []);
 
   const fetchMeters = async () => {
+    setIsLoading(true);
     try {
       const response = await fetch('/api/meters');
       const data = await response.json();
+      
+      if (response.status === 401 && data.tokenExpired) {
+        toast.error('Session expired. Please login again.');
+        router.push('/login');
+        return;
+      }
+      
       if (data.success) {
         setMeters(data.data);
+      } else {
+        toast.error(data.error || 'Failed to fetch meters');
       }
     } catch (error) {
       toast.error('Failed to fetch meters');
@@ -30,7 +44,12 @@ export default function MetersPage() {
     }
   };
 
-  const controlMeter = async (meterId: string, type: 0 | 1 | 2) => {
+  const controlMeter = async (meterId: string, type: 0 | 2, meter: UserMeter) => {
+    if (meter.unConnect === 1) {
+      toast.error('Cannot control meter - No network connection');
+      return;
+    }
+
     setControllingMeter(meterId);
     try {
       const response = await fetch(`/api/meters/${meterId}/control`, {
@@ -41,8 +60,8 @@ export default function MetersPage() {
 
       const data = await response.json();
       if (data.success) {
-        toast.success('Meter control command sent successfully');
-        fetchMeters();
+        toast.success(type === 0 ? 'Meter turned OFF' : 'Meter turned ON (Prepaid mode)');
+        setTimeout(fetchMeters, 500);
       } else {
         throw new Error(data.error);
       }
@@ -50,15 +69,6 @@ export default function MetersPage() {
       toast.error(error.message || 'Failed to control meter');
     } finally {
       setControllingMeter(null);
-    }
-  };
-
-  const getControlLabel = (type: number) => {
-    switch (type) {
-      case 0: return 'Turn Off';
-      case 1: return 'Turn On';
-      case 2: return 'Prepaid Mode';
-      default: return 'Unknown';
     }
   };
 
@@ -89,74 +99,106 @@ export default function MetersPage() {
         </Card>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {meters.map((meter) => (
-            <Card key={meter.meterId}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <Zap className="w-5 h-5" />
-                    Meter {meter.meterId}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    meter.status === 'online' 
-                      ? 'bg-green-500/10 text-green-500' 
-                      : 'bg-gray-500/10 text-gray-500'
-                  }`}>
-                    {meter.status || 'unknown'}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Room</p>
-                  <p className="font-medium">{meter.roomNo || 'N/A'}</p>
-                </div>
-
-                <div>
-                  <p className="text-sm text-muted-foreground">Balance</p>
-                  <p className="text-2xl font-bold text-primary">
-                    {formatNaira((meter.balance || 0) * 100)}
-                  </p>
-                </div>
-
-                <div className="pt-2 space-y-2">
-                  <p className="text-sm font-medium">Controls</p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => controlMeter(meter.meterId, 0)}
-                      disabled={controllingMeter === meter.meterId}
-                      className="text-xs"
-                    >
-                      <PowerOff className="w-3 h-3 mr-1" />
-                      Off
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => controlMeter(meter.meterId, 1)}
-                      disabled={controllingMeter === meter.meterId}
-                      className="text-xs"
-                    >
-                      <Power className="w-3 h-3 mr-1" />
-                      On
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => controlMeter(meter.meterId, 2)}
-                      disabled={controllingMeter === meter.meterId}
-                      className="text-xs"
-                    >
-                      <Zap className="w-3 h-3 mr-1" />
-                      Prepaid
-                    </Button>
+          {meters.map((meter) => {
+            const balance = parseFloat(meter.balance) || 0;
+            const epi = parseFloat(meter.epi) || 0;
+            const isPowerConnected = meter.switchSta === 1;
+            const isNetworkConnected = meter.unConnect === 0;
+            
+            return (
+              <Card key={meter.meterId}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-armogrid-red" />
+                      Meter ID: {meter.meterId}
+                    </span>
+                    {isNetworkConnected ? (
+                      <Badge variant="success" className="flex items-center gap-1">
+                        <Wifi className="h-3 w-3" />
+                        Online
+                      </Badge>
+                    ) : (
+                      <Badge variant="destructive" className="flex items-center gap-1">
+                        <WifiOff className="h-3 w-3" />
+                        Offline
+                      </Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Room</p>
+                    <p className="font-medium">{meter.roomNo}</p>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+
+                  <div>
+                    <p className="text-sm text-muted-foreground">Balance</p>
+                    <p className="text-2xl font-bold text-primary">
+                      {formatNaira(balance * 100)}
+                    </p>
+                  </div>
+
+                  {/* Power Status */}
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2">
+                      {isPowerConnected ? (
+                        <Power className="h-5 w-5 text-green-600" />
+                      ) : (
+                        <PowerOff className="h-5 w-5 text-red-600" />
+                      )}
+                      <span className="text-sm font-medium">Power Status</span>
+                    </div>
+                    <Badge variant={isPowerConnected ? 'success' : 'destructive'}>
+                      {isPowerConnected ? 'Connected' : 'Disconnected'}
+                    </Badge>
+                  </div>
+
+
+                  {/* Network Warning */}
+                  {!isNetworkConnected && (
+                    <div className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/20 p-2 rounded">
+                      ⚠️ No network connection. Control unavailable.
+                    </div>
+                  )}
+
+                  {/* Power Control */}
+                  <div className="pt-2 border-t">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium">Power Control</p>
+                      <button
+                        onClick={() => controlMeter(
+                          meter.meterId,
+                          isPowerConnected ? 0 : 2,
+                          meter
+                        )}
+                        disabled={!isNetworkConnected || controllingMeter === meter.meterId}
+                        className={`
+                          relative w-14 h-14 rounded-2xl transition-all duration-300 shadow-lg
+                          disabled:opacity-50 disabled:cursor-not-allowed
+                          hover:scale-105 active:scale-95
+                          ${isPowerConnected
+                            ? 'bg-gradient-to-br from-green-400 to-green-600 shadow-green-500/50'
+                            : 'bg-gradient-to-br from-gray-400 to-gray-600 shadow-gray-500/50'
+                          }
+                        `}
+                      >
+                        {controllingMeter === meter.meterId ? (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="w-6 h-6 border-3 border-white border-t-transparent rounded-full animate-spin" />
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Power className="w-7 h-7 text-white" strokeWidth={2.5} />
+                          </div>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

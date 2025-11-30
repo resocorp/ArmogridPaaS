@@ -30,15 +30,25 @@ export async function POST(
     const adminToken = await getAdminToken();
 
     // Control meter
+    console.log(`[Meter Control] Controlling meter ${meterId} with type ${type}`);
     const response = await iotClient.controlMeter(meterId, type, adminToken);
+    console.log(`[Meter Control] IoT response:`, JSON.stringify(response));
 
-    if (response.code !== 200 && response.code !== 0) {
+    // Check both old and new API formats
+    const isSuccess = 
+      (response.success === '1') || // New format
+      (response.code === 200 || response.code === 0); // Legacy format
+
+    if (!isSuccess) {
+      const errorMsg = response.errorMsg || response.msg || 'Failed to control meter';
+      console.error(`[Meter Control] Control failed:`, errorMsg);
       return NextResponse.json(
-        { error: response.msg || 'Failed to control meter' },
+        { error: errorMsg },
         { status: 400 }
       );
     }
 
+    console.log(`[Meter Control] Control successful`);
     return NextResponse.json({
       success: true,
       message: 'Meter control command sent successfully',

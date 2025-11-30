@@ -50,15 +50,27 @@ export interface GetMeterInfoResponse {
 export interface UserMeter {
   meterId: string;
   roomNo: string;
+  balance: string; // Balance as string from API
+  togetherMoney: string;
+  oweMoney: boolean;
+  controlMode: boolean;
+  switchSta: 0 | 1; // 0 = Power Disconnected, 1 = Power Connected
+  unConnect: 0 | 1; // 0 = Connected to network, 1 = No network
+  together: boolean;
+  meterType: number;
+  epi: string; // Energy consumption
   projectId?: string;
   projectName?: string;
-  balance?: number;
-  status?: string;
 }
 
 export interface GetUserMeterListResponse {
-  code: number;
-  msg: string;
+  // New API format
+  success?: string; // "1" for success
+  errorCode?: string;
+  errorMsg?: string;
+  // Legacy format
+  code?: number;
+  msg?: string;
   data: UserMeter[];
 }
 
@@ -68,8 +80,13 @@ export interface MeterControlRequest {
 }
 
 export interface MeterControlResponse {
-  code: number;
-  msg: string;
+  // New API format
+  success?: string; // "1" for success
+  errorCode?: string;
+  errorMsg?: string;
+  // Legacy format
+  code?: number;
+  msg?: string;
   data?: any;
 }
 

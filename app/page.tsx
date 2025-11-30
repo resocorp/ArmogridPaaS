@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Zap, Shield, TrendingUp, Clock } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Zap, Shield, TrendingUp, Clock, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,13 +9,90 @@ import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { isValidMeterId, formatNaira } from '@/lib/utils';
-import { MIN_RECHARGE_AMOUNT, MAX_RECHARGE_AMOUNT } from '@/lib/constants';
+import { MIN_RECHARGE_AMOUNT, MAX_RECHARGE_AMOUNT, PAYSTACK_FEE } from '@/lib/constants';
 
 export default function HomePage() {
   const [meterId, setMeterId] = useState('');
   const [amount, setAmount] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [meterValidation, setMeterValidation] = useState<{
+    isValidating: boolean;
+    found: boolean | null;
+    roomNo: string | null;
+  }>({ isValidating: false, found: null, roomNo: null });
+
+  // Calculate Paystack fee in real-time
+  const feeCalculation = useMemo(() => {
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      return null;
+    }
+
+    // Local card fee: 1.5% + ₦100 (capped at ₦2,000)
+    // ₦100 fee is waived for transactions under ₦2,500
+    const percentageFee = Math.ceil(amountNum * PAYSTACK_FEE.LOCAL_PERCENTAGE);
+    const flatFee = amountNum >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
+    
+    let fee = percentageFee + flatFee;
+    fee = Math.min(fee, PAYSTACK_FEE.LOCAL_CAP); // Cap at ₦2,000
+    
+    const totalAmount = amountNum + fee;
+    
+    let feeDescription: string;
+    if (amountNum < PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD) {
+      feeDescription = '1.5% (₦100 fee waived)';
+    } else {
+      feeDescription = '1.5% + ₦100';
+    }
+
+    return {
+      rechargeAmount: amountNum,
+      fee,
+      totalAmount,
+      feeDescription,
+    };
+  }, [amount]);
+
+  const validateMeter = async (meterIdToValidate: string) => {
+    if (!meterIdToValidate || !isValidMeterId(meterIdToValidate)) {
+      setMeterValidation({ isValidating: false, found: null, roomNo: null });
+      return;
+    }
+
+    setMeterValidation({ isValidating: true, found: null, roomNo: null });
+
+    try {
+      const response = await fetch('/api/meters/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ meterId: meterIdToValidate }),
+      });
+
+      const data = await response.json();
+
+      if (data.found) {
+        setMeterValidation({
+          isValidating: false,
+          found: true,
+          roomNo: data.roomNo,
+        });
+      } else {
+        setMeterValidation({
+          isValidating: false,
+          found: false,
+          roomNo: null,
+        });
+      }
+    } catch (error) {
+      console.error('Meter validation error:', error);
+      setMeterValidation({
+        isValidating: false,
+        found: false,
+        roomNo: null,
+      });
+    }
+  };
 
   const handleRecharge = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,10 +237,26 @@ export default function HomePage() {
                     type="text"
                     placeholder="e.g., 23"
                     value={meterId}
-                    onChange={(e) => setMeterId(e.target.value)}
+                    onChange={(e) => {
+                      setMeterId(e.target.value);
+                      // Reset validation when user types
+                      setMeterValidation({ isValidating: false, found: null, roomNo: null });
+                    }}
+                    onBlur={(e) => validateMeter(e.target.value)}
                     className="h-12 text-base"
                     required
                   />
+                  {meterValidation.isValidating && (
+                    <p className="text-xs text-gray-500">Validating meter...</p>
+                  )}
+                  {!meterValidation.isValidating && meterValidation.found === true && (
+                    <p className="text-xs text-green-600">
+                      {meterValidation.roomNo ? `Room: ${meterValidation.roomNo}` : 'Meter found'}
+                    </p>
+                  )}
+                  {!meterValidation.isValidating && meterValidation.found === false && (
+                    <p className="text-xs text-red-600">Meter not found</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -171,7 +264,7 @@ export default function HomePage() {
                   <Input
                     id="amount"
                     type="number"
-                    placeholder={`Min: ₦${MIN_RECHARGE_AMOUNT}`}
+                    placeholder={`Min: ₦${MIN_RECHARGE_AMOUNT.toLocaleString()}`}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     min={MIN_RECHARGE_AMOUNT}
@@ -180,7 +273,41 @@ export default function HomePage() {
                     className="h-12 text-base"
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Min: ₦{MIN_RECHARGE_AMOUNT.toLocaleString()} • Max: ₦{MAX_RECHARGE_AMOUNT.toLocaleString()}
+                  </p>
                 </div>
+
+                {/* Fee Breakdown */}
+                {feeCalculation && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
+                    <div className="flex items-start gap-2">
+                      <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <p className="text-sm font-medium text-blue-900">Payment Breakdown</p>
+                        <div className="space-y-1 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Recharge amount:</span>
+                            <span className="font-medium">₦{feeCalculation.rechargeAmount.toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Paystack fee ({feeCalculation.feeDescription}):</span>
+                            <span className="font-medium">₦{feeCalculation.fee.toLocaleString()}</span>
+                          </div>
+                          <div className="border-t border-blue-200 pt-1 mt-1">
+                            <div className="flex justify-between">
+                              <span className="font-semibold text-blue-900">Total to pay:</span>
+                              <span className="font-bold text-blue-900">₦{feeCalculation.totalAmount.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Transaction fees are added to ensure seamless payment processing
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="email" className="text-base font-semibold">Email</Label>
@@ -200,11 +327,10 @@ export default function HomePage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-gradient-to-r from-armogrid-red to-orange-500 hover:from-armogrid-red/90 hover:to-orange-500/90 text-white shadow-lg shadow-armogrid-red/30 transition-all duration-300 hover:scale-[1.02]"
-                  size="lg"
+                  className="w-full h-12 text-lg font-semibold bg-armogrid-red hover:bg-armogrid-red/90 shadow-lg"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Processing...' : 'Recharge Now'}
+                  {isLoading ? 'Processing...' : feeCalculation ? `Pay ₦${feeCalculation.totalAmount.toLocaleString()}` : 'Recharge Now'}
                 </Button>
 
                 <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
