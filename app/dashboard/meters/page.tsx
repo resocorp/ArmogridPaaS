@@ -16,10 +16,10 @@ import type { UserMeter, MeterDetailedInfo } from '@/types/iot';
 // Auto-refresh interval: 10 minutes
 const REFRESH_INTERVAL = 10 * 60 * 1000;
 
-// Usage level thresholds
-const getUsageLevel = (power: number) => {
-  if (power < 0.2) return { color: 'emerald', bgClass: 'bg-emerald-50', textClass: 'text-emerald-600', borderClass: 'border-emerald-200', label: 'Low' };
-  if (power < 0.8) return { color: 'amber', bgClass: 'bg-amber-50', textClass: 'text-amber-600', borderClass: 'border-amber-200', label: 'Moderate' };
+// Usage level thresholds (in watts)
+const getUsageLevel = (powerWatts: number) => {
+  if (powerWatts < 200) return { color: 'emerald', bgClass: 'bg-emerald-50', textClass: 'text-emerald-600', borderClass: 'border-emerald-200', label: 'Low' };
+  if (powerWatts < 800) return { color: 'amber', bgClass: 'bg-amber-50', textClass: 'text-amber-600', borderClass: 'border-amber-200', label: 'Moderate' };
   return { color: 'red', bgClass: 'bg-red-50', textClass: 'text-red-600', borderClass: 'border-red-200', label: 'High' };
 };
 
@@ -269,7 +269,8 @@ export default function MetersPage() {
             const rate = details?.priceFlat || 0;
             const isPowerConnected = details ? details.switchSta === "1" : meter.switchSta === 1;
             const isNetworkConnected = details ? details.unConnnect === 0 : meter.unConnect === 0;
-            const usageLevel = getUsageLevel(power);
+            const powerWatts = power * 1000; // Convert kW to watts
+            const usageLevel = getUsageLevel(powerWatts);
             
             return (
               <Card key={meter.meterId} className="overflow-hidden">
@@ -325,8 +326,8 @@ export default function MetersPage() {
                       </span>
                     </div>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-bold text-foreground">{power.toFixed(2)}</span>
-                      <span className="text-base text-muted-foreground font-medium">kW</span>
+                      <span className="text-3xl font-bold text-foreground">{Math.round(powerWatts).toLocaleString()}</span>
+                      <span className="text-base text-muted-foreground font-medium">watts</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Rate: ₦{rate}/kWh
@@ -385,7 +386,15 @@ export default function MetersPage() {
                       </div>
                     </div>
                     <button
-                      onClick={() => controlMeter(meter.meterId, isPowerConnected ? 0 : 2, meter)}
+                      onClick={() => {
+                        if (isPowerConnected) {
+                          if (window.confirm('Are you sure you want to turn off the meter? This will disconnect power to the meter.')) {
+                            controlMeter(meter.meterId, 0, meter);
+                          }
+                        } else {
+                          controlMeter(meter.meterId, 2, meter);
+                        }
+                      }}
                       disabled={!isNetworkConnected || controllingMeter === meter.meterId}
                       className={cn(
                         "w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200",
@@ -432,11 +441,7 @@ export default function MetersPage() {
                               step="100"
                               required
                             />
-                            <p className="text-[10px] text-muted-foreground">
-                              Min: ₦{MIN_RECHARGE_AMOUNT.toLocaleString()} • Max: ₦
-                              {MAX_RECHARGE_AMOUNT.toLocaleString()}
-                            </p>
-                          </div>
+                                                      </div>
                           <div className="space-y-1">
                             <Label htmlFor={`email-${meter.meterId}`}>Email</Label>
                             <Input
