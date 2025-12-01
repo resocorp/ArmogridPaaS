@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { Zap, LayoutDashboard, Gauge, TrendingUp, Receipt, LogOut, Menu, X } from 'lucide-react';
+import { Zap, Gauge, TrendingUp, Receipt, LogOut, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useSessionMonitor } from '@/lib/hooks/use-session-monitor';
@@ -50,7 +50,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Meters', href: '/dashboard/meters', icon: Gauge },
     { name: 'Analytics', href: '/dashboard/analytics', icon: TrendingUp },
     { name: 'Transactions', href: '/dashboard/transactions', icon: Receipt },

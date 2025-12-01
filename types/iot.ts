@@ -63,6 +63,42 @@ export interface UserMeter {
   projectName?: string;
 }
 
+// Extended meter info from getMeterInfo API with live data
+export interface MeterDetailedInfo {
+  meterId: string;
+  roomNo: string;
+  startMoney: number;
+  totalMoney: number;
+  buyTimes: number;
+  alarmA: number;
+  alarmB: number;
+  priceSharp: number;
+  pricePeak: number;
+  priceFlat: number;
+  priceValley: number;
+  balance: string;
+  togetherMoney: number;
+  oweMoney: boolean;
+  userStaus: number;
+  controlMode: string;
+  switchSta: string; // "0" or "1"
+  unConnnect: number; // Note: API has typo with 3 n's
+  createTime: string;
+  model: string;
+  epi: string; // Total energy consumed
+  ct: number;
+  // Voltage readings
+  ua: string;
+  ub: string;
+  uc: string;
+  // Current readings
+  ia: string;
+  ib: string;
+  ic: string;
+  // Power reading
+  p: string; // Current power in kW
+}
+
 export interface GetUserMeterListResponse {
   // New API format
   success?: string; // "1" for success
@@ -114,12 +150,19 @@ export interface SalePowerResponse {
 }
 
 export interface SaleRecord {
-  saleId: string;
-  meterId: string;
-  saleMoney: number;
-  buyType: number;
-  saleTime: string;
-  status?: string;
+  createTime: string; // "2025-11-30 08:06:23"
+  roomNo: string; // "RM001"
+  saleMoney: string; // "5000.00" - amount in Naira as string
+  saleType: string; // "1"
+  buyType: string; // "1" = Cash, "3" = Web Purchase
+  buyTypeNames: {
+    'en-US': string;
+    'zh-CN': string;
+  };
+  remark: string; // Can be JSON string or plain text
+  saleNo: string; // Transaction ID e.g. "1764489987810"
+  success: number; // 1 = success, 0 = failed
+  meterType: number;
 }
 
 export interface GetUserSaleListRequest {
@@ -128,27 +171,35 @@ export interface GetUserSaleListRequest {
 }
 
 export interface GetUserSaleListResponse {
-  code: number;
-  msg: string;
+  success: string; // "1" for success
+  errorCode: string;
+  errorMsg: string;
   data: SaleRecord[];
 }
 
-export interface EnergyData {
-  date: string;
-  energy: number;
-  cost?: number;
+export interface EnergyDataRecord {
+  createTime: string; // "2025-03-16 00:00:00"
+  meterId: string;
+  userName: string | null;
+  roomNo: string | null;
+  powerUse: string; // Daily energy consumption in kWh as string
+  powerStart: string; // Start meter reading
+  powerEnd: string; // End meter reading
+  sn: string;
+  ct: string;
 }
 
 export interface GetMeterEnergyRequest {
   meterId: string;
-  startDate: string; // YYYY-MM-DD
-  endDate: string; // YYYY-MM-DD
+  startDate: string; // "YYYY-MM-DD HH:mm:ss" format
+  endDate: string; // "YYYY-MM-DD HH:mm:ss" format
 }
 
 export interface GetMeterEnergyResponse {
-  code: number;
-  msg: string;
-  data: EnergyData[];
+  success: string; // "1" for success
+  errorCode: string;
+  errorMsg: string;
+  data: EnergyDataRecord[];
 }
 
 export interface ProjectInfo {

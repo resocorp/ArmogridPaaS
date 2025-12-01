@@ -201,13 +201,15 @@ class IotClient {
 
   /**
    * Get daily energy consumption data
+   * Note: API expects datetime format "YYYY-MM-DD HH:mm:ss"
    */
   async getMeterEnergyDay(
     meterId: string,
-    startDate: string,
-    endDate: string,
+    startDate: string, // "YYYY-MM-DD HH:mm:ss"
+    endDate: string, // "YYYY-MM-DD HH:mm:ss"
     token: string
   ): Promise<IoT.GetMeterEnergyResponse> {
+    console.log(`[IoT Client] Getting daily energy for meter ${meterId} from ${startDate} to ${endDate}`);
     return this.request<IoT.GetMeterEnergyResponse>(
       '/basic/prepayment/app/getMeterEnergyDay',
       {
@@ -220,13 +222,15 @@ class IotClient {
 
   /**
    * Get monthly energy consumption data
+   * Note: API expects datetime format "YYYY-MM-DD HH:mm:ss"
    */
   async getMeterEnergyMonth(
     meterId: string,
-    startDate: string,
-    endDate: string,
+    startDate: string, // "YYYY-MM-DD HH:mm:ss"
+    endDate: string, // "YYYY-MM-DD HH:mm:ss"
     token: string
   ): Promise<IoT.GetMeterEnergyResponse> {
+    console.log(`[IoT Client] Getting monthly energy for meter ${meterId} from ${startDate} to ${endDate}`);
     return this.request<IoT.GetMeterEnergyResponse>(
       '/basic/prepayment/app/getMeterEnergyMonth',
       {
