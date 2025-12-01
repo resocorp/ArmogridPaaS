@@ -50,6 +50,21 @@ export interface UserSession {
   created_at: string;
 }
 
+export interface MeterCredential {
+  id: string;
+  room_no: string;
+  project_id: string;
+  project_name: string | null;
+  username: string;
+  password_hash: string; // MD5 hashed
+  iot_token: string | null;
+  token_expires_at: string | null;
+  last_sync_at: string | null;
+  meter_data: Record<string, any> | null; // Cached meter details
+  created_at: string;
+  updated_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -72,6 +87,11 @@ export type Database = {
         Row: UserSession;
         Insert: Omit<UserSession, "id" | "created_at">;
         Update: Partial<Omit<UserSession, "id" | "created_at">>;
+      };
+      meter_credentials: {
+        Row: MeterCredential;
+        Insert: Omit<MeterCredential, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<MeterCredential, "id" | "created_at">>;
       };
     };
   };

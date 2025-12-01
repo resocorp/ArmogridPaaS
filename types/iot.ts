@@ -203,7 +203,7 @@ export interface GetMeterEnergyResponse {
 }
 
 export interface ProjectInfo {
-  projectId: string;
+  id: number;
   projectName: string;
   address?: string;
   meterCount?: number;
@@ -216,18 +216,59 @@ export interface GetProjectListRequest {
 }
 
 export interface GetProjectListResponse {
-  code: number;
-  msg: string;
+  success: string; // "1" for success
+  errorCode: string;
+  errorMsg: string;
   data: {
+    pagination: {
+      current: number;
+      pageSize: number;
+      total: number;
+      pageCount: number;
+    };
     list: ProjectInfo[];
-    total: number;
   };
 }
 
 export interface RoomInfo {
-  roomNo: string;
-  meterId?: string;
+  name: string; // Room name like "FLAT-1"
+  projectId: number;
+  projectName: string;
+  meterId: number;
+  meterSN?: string;
+  acreage?: number;
+  remark?: string;
+  // Legacy fields
+  roomNo?: string;
+  roomId?: string;
   status?: string;
+  switchSta?: number | string;
+  buildingName?: string;
+  floorName?: string;
+}
+
+export interface MeterDetailInfo {
+  meterId: string;
+  roomNo: string;
+  balance: string;
+  totalMoney: number;
+  buyTimes: number;
+  switchSta: string; // "0" = off, "1" = on
+  unConnnect: number; // 0 = online, 1 = offline
+  controlMode: string;
+  epi: string; // Energy reading in kWh
+  model: string;
+  createTime: string;
+  alarmA?: number;
+  alarmB?: number;
+  priceFlat?: number;
+  ua?: string;
+  ub?: string;
+  uc?: string;
+  ia?: string;
+  ib?: string;
+  ic?: string;
+  p?: string; // Power
 }
 
 export interface GetProjectRoomInfoRequest {
@@ -235,8 +276,11 @@ export interface GetProjectRoomInfoRequest {
 }
 
 export interface GetProjectRoomInfoResponse {
-  code: number;
-  msg: string;
+  success: string; // "1" for success
+  errorCode: string;
+  errorMsg: string;
+  code?: number; // Legacy format
+  msg?: string; // Legacy format
   data: RoomInfo[];
 }
 
