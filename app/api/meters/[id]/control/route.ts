@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getAdminToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
+import { translateErrorMessage } from '@/lib/utils';
 
 export async function POST(
   request: NextRequest,
@@ -40,8 +41,9 @@ export async function POST(
       (response.code === 200 || response.code === 0); // Legacy format
 
     if (!isSuccess) {
-      const errorMsg = response.errorMsg || response.msg || 'Failed to control meter';
-      console.error(`[Meter Control] Control failed:`, errorMsg);
+      const rawErrorMsg = response.errorMsg || response.msg || 'Failed to control meter';
+      const errorMsg = translateErrorMessage(rawErrorMsg);
+      console.error(`[Meter Control] Control failed:`, rawErrorMsg, '-> Translated:', errorMsg);
       return NextResponse.json(
         { error: errorMsg },
         { status: 400 }

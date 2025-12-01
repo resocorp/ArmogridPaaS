@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { iotClient } from '@/lib/iot-client';
 import { createSession } from '@/lib/auth';
+import { translateErrorMessage } from '@/lib/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,8 +29,9 @@ export async function POST(request: NextRequest) {
       (response.code === 200 || response.code === 0); // Legacy format
 
     if (!isSuccess) {
-      const errorMsg = response.errorMsg || response.msg || 'Login failed';
-      console.error('[Login] Login failed:', errorMsg);
+      const rawErrorMsg = response.errorMsg || response.msg || 'Login failed';
+      const errorMsg = translateErrorMessage(rawErrorMsg);
+      console.error('[Login] Login failed:', rawErrorMsg, '-> Translated:', errorMsg);
       return NextResponse.json(
         { error: errorMsg },
         { status: 401 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
+import { translateErrorMessage } from '@/lib/utils';
 
 export async function GET() {
   try {
@@ -15,10 +16,11 @@ export async function GET() {
       (response.code === 200 || response.code === 0); // Legacy format
 
     if (!isSuccess) {
-      const errorMsg = response.errorMsg || response.msg || 'Failed to fetch meters';
+      const rawErrorMsg = response.errorMsg || response.msg || 'Failed to fetch meters';
+      const errorMsg = translateErrorMessage(rawErrorMsg);
       
       // Check if token expired (common error codes)
-      if (errorMsg.toLowerCase().includes('token') || errorMsg.toLowerCase().includes('expired')) {
+      if (rawErrorMsg.toLowerCase().includes('token') || rawErrorMsg.toLowerCase().includes('expired')) {
         return NextResponse.json(
           { error: 'Session expired', tokenExpired: true },
           { status: 401 }

@@ -3,7 +3,7 @@ import { verifyWebhookSignature } from '@/lib/paystack';
 import { iotClient } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
-import { generateSaleId } from '@/lib/utils';
+import { generateSaleId, translateErrorMessage } from '@/lib/utils';
 import { BUY_TYPE } from '@/lib/constants';
 import type { PaystackWebhookEvent } from '@/types/payment';
 
@@ -135,8 +135,9 @@ export async function POST(request: NextRequest) {
 
           console.log(`[Webhook] Successfully credited meter ${meterId} with ₦${transaction.amount_kobo / 100}`);
         } else {
-          const errorMsg = saleResponse.errorMsg || saleResponse.msg || 'Failed to credit meter';
-          console.error('[Webhook] SalePower failed:', errorMsg);
+          const rawErrorMsg = saleResponse.errorMsg || saleResponse.msg || 'Failed to credit meter';
+          const errorMsg = translateErrorMessage(rawErrorMsg);
+          console.error('[Webhook] SalePower failed:', rawErrorMsg, '-> Translated:', errorMsg);
           throw new Error(errorMsg);
         }
       } else {

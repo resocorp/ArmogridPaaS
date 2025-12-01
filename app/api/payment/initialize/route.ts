@@ -3,7 +3,7 @@ import { initializePayment, generatePaymentReference, calculatePaystackFee } fro
 import { iotClient } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
-import { nairaToKobo, isValidMeterId } from '@/lib/utils';
+import { nairaToKobo, isValidMeterId, translateErrorMessage } from '@/lib/utils';
 import { MIN_RECHARGE_AMOUNT, MAX_RECHARGE_AMOUNT } from '@/lib/constants';
 
 export async function POST(request: NextRequest) {
@@ -58,8 +58,9 @@ export async function POST(request: NextRequest) {
         (meterInfo.code === 200 || meterInfo.code === 0); // Legacy format
       
       if (!isSuccess) {
-        const errorMsg = meterInfo.errorMsg || meterInfo.msg || 'Unknown error';
-        console.error('[Payment Init] Meter lookup failed:', errorMsg);
+        const rawErrorMsg = meterInfo.errorMsg || meterInfo.msg || 'Unknown error';
+        const errorMsg = translateErrorMessage(rawErrorMsg);
+        console.error('[Payment Init] Meter lookup failed:', rawErrorMsg, '-> Translated:', errorMsg);
         return NextResponse.json(
           { error: `Meter not found: ${errorMsg}` },
           { status: 404 }

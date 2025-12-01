@@ -345,7 +345,7 @@ export default function HomePage() {
         {/* Quick Stats */}
         <div className="grid sm:grid-cols-3 gap-6 mt-20">
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 text-center border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:border-armogrid-red/30">
-            <div className="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">₦100+</div>
+            <div className="text-4xl font-bold text-white mb-3 bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent">₦500+</div>
             <div className="text-white/80 font-medium">Minimum Recharge</div>
           </div>
           <div className="bg-white/5 backdrop-blur-md rounded-2xl p-8 text-center border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105 hover:border-armogrid-red/30">

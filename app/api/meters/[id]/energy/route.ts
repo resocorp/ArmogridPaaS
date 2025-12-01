@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { format, subDays, subMonths, addDays, parseISO } from 'date-fns';
+import { translateErrorMessage } from '@/lib/utils';
 
 export async function GET(
   request: NextRequest,
@@ -55,8 +56,9 @@ export async function GET(
 
     // Handle new API response format (success: "1")
     if (response.success !== '1') {
+      const errorMsg = translateErrorMessage(response.errorMsg || 'Failed to fetch energy data');
       return NextResponse.json(
-        { error: response.errorMsg || 'Failed to fetch energy data' },
+        { error: errorMsg },
         { status: 400 }
       );
     }

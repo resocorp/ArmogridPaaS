@@ -1,0 +1,742 @@
+{
+	"info": {
+		"_postman_id": "89636989-96ae-40c0-9d7d-5cceaa75aef9",
+		"name": "API TESTING CONFIRMED WORKING",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "39693497",
+		"_collection_link": "https://solarshare.postman.co/workspace/SOLARSHARE-Workspace~c25ff5f7-bd18-4cc1-8072-7d6a31f265a2/collection/39693497-89636989-96ae-40c0-9d7d-5cceaa75aef9?action=share&source=collection_link&creator=39693497"
+	},
+	"item": [
+		{
+			"name": "Login-admin",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"var template = `\r",
+							"<style type=\"text/css\">\r",
+							"    .tftable {font-size:14px;color:#333333;width:100%;border-width: 1px;border-color: #87ceeb;border-collapse: collapse;}\r",
+							"    .tftable th {font-size:18px;background-color:#87ceeb;border-width: 1px;padding: 8px;border-style: solid;border-color: #87ceeb;text-align:left;}\r",
+							"    .tftable tr {background-color:#ffffff;}\r",
+							"    .tftable td {font-size:14px;border-width: 1px;padding: 8px;border-style: solid;border-color: #87ceeb;}\r",
+							"    .tftable tr:hover {background-color:#e0ffff;}\r",
+							"</style>\r",
+							"\r",
+							"<table class=\"tftable\" border=\"1\">\r",
+							"    <tr>\r",
+							"        <th>Success</th>\r",
+							"        <th>ErrorCode</th>\r",
+							"        <th>ErrorMsg</th>\r",
+							"        <th>Data</th>\r",
+							"    </tr>\r",
+							"    <tr>\r",
+							"        <td>{{response.success}}</td>\r",
+							"        <td>{{response.errorCode}}</td>\r",
+							"        <td>{{response.errorMsg}}</td>\r",
+							"        <td>{{response.data}}</td>\r",
+							"    </tr>\r",
+							"</table>\r",
+							"`;\r",
+							"\r",
+							"function constructVisualizerPayload() {\r",
+							"    return { response: pm.response.json() };\r",
+							"}\r",
+							"\r",
+							"pm.visualizer.set(template, constructVisualizerPayload());"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const password = 'MQptQ8JT_V:KeLr';  // Replace with your actual password\r",
+							"const hashedPassword = CryptoJS.MD5(password).toString();  // MD5 hashing\r",
+							"console.log(\"MD5 Hashed Password:\", hashedPassword);  // Log it to verify\r",
+							"pm.environment.set('hashedPassword', hashedPassword);  // Set it as environment variable\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"admin\",\r\n  \"password\": \"{{hashedPassword}}\",\r\n  \"type\": \"0\"  // 0 for Administrator, 1 for Normal User\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/appUserLogin",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"appUserLogin"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/getUserMeterList (usertoken) user_1",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MjAsIm5hbWUiOiJmbGF0OSIsImV4cCI6MTc0NDQ3MjI0NywibmJmIjoxNzQ0NDQzNDQ3fQ.so0QvdePFqtDUlbrVM1HdJ5yTCQSmLjQgeMl_0v-C6U",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": []
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/getUserMeterList",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"getUserMeterList"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login-user_1",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const password = 'resonance903@yahoo.com';  // Replace with your actual password\r",
+							"const hashedPassword = CryptoJS.MD5(password).toString();  // MD5 hashing\r",
+							"console.log(\"MD5 Hashed Password:\", hashedPassword);  // Log it to verify\r",
+							"pm.environment.set('hashedPassword', hashedPassword);  // Set it as environment variable\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"resonance903@yahoo.com\",\r\n  \"password\": \"{{hashedPassword}}\",\r\n  \"type\": \"1\"  // 0 for Administrator, 1 for Normal User\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/appUserLogin",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"appUserLogin"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Login-user_2",
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							"const password = '1234';  // Replace with your actual password\r",
+							"const hashedPassword = CryptoJS.MD5(password).toString();  // MD5 hashing\r",
+							"console.log(\"MD5 Hashed Password:\", hashedPassword);  // Log it to verify\r",
+							"pm.environment.set('hashedPassword', hashedPassword);  // Set it as environment variable\r",
+							""
+						],
+						"type": "text/javascript",
+						"packages": {}
+					}
+				}
+			],
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"user_2\",\r\n  \"password\": \"{{hashedPassword}}\",\r\n  \"type\": \"1\"  // 0 for Administrator, 1 for Normal User\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/appUserLogin",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"appUserLogin"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/getUserMeterList (usertoken) user_2",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MSwiYWNjb3VudCI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZXhwIjoxNzY0NjI3MzY3LCJuYmYiOjE3NjQ1OTg1Njd9.adG_DnuasMYrRIHTbr0g_z8clGIntG9IXNGtoJB9OM4",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "urlencoded",
+					"urlencoded": []
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/getUserMeterList",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"getUserMeterList"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/app/getMeterInfo (usertoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MTIsIm5hbWUiOiJmbGF0MSIsImV4cCI6MTc2NDYyNzYxMCwibmJmIjoxNzY0NTk4ODEwfQ.jajXB6_DGXHjaQjuKqDB3Hi6J0GG_QYixQJZe_Wamq0",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \r\n    \"roomNo\": \"FLAT-6\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/getMeterInfo",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"getMeterInfo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/MeterControl (admintoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MSwiYWNjb3VudCI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZXhwIjoxNzQyMzQ1NDMyLCJuYmYiOjE3NDIzMTY2MzJ9.gTX7Itmn1-Yx6X0xGDY-JIALavve4VRcA-xy4_1e8ac",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \r\n    \"meterId\": \"10\", \r\n    \"type\": \"1\"  //(0 = Off, 1 = On, 2 = Restore Prepaid mode)\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/MeterControl",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"MeterControl"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/SalePower (admintoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MSwiYWNjb3VudCI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZXhwIjoxNzY0NDQ5MzEyLCJuYmYiOjE3NjQ0MjA1MTJ9.Gc8Tfu28ZPdO-BnuY6Qq8iEdWSBEgsj80_IH6RyM4CI",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": " { \r\n    \"meterId\": \"28\", \r\n    \"saleMoney\": 100000, \r\n    \"buyType\": 3, \r\n    \"saleId\": \"73028032031\" \r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/SalePower",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"SalePower"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/appProjectList (usertoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MSwiYWNjb3VudCI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZXhwIjoxNzY0NjI3MzY3LCJuYmYiOjE3NjQ1OTg1Njd9.adG_DnuasMYrRIHTbr0g_z8clGIntG9IXNGtoJB9OM4",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"keyword\":\"\",\r\n\"pageSize\":20,\r\n\"pageIndex\":1\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/appProjectList?",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"appProjectList"
+					],
+					"query": [
+						{
+							"key": "",
+							"value": null
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/ProjectRoomInfo (usertoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MSwiYWNjb3VudCI6ImFkbWluIiwibmFtZSI6ImFkbWluIiwiZXhwIjoxNzY0NjI3MzY3LCJuYmYiOjE3NjQ1OTg1Njd9.adG_DnuasMYrRIHTbr0g_z8clGIntG9IXNGtoJB9OM4",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n\"projectId\":\"4\"\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/ProjectRoomInfo",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"ProjectRoomInfo"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/getMeterEnergyDay (usertoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MjUsIm5hbWUiOiJyZXNvbmFuY2U5MDNAeWFob28uY29tIiwiZXhwIjoxNzY0NTM5Njc2LCJuYmYiOjE3NjQ1MTA4NzZ9.1oHloLVKCqDa12Pw-fOI7PAIrAXbQYLte8G2Re5rm90",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \r\n    \"meterId\": \"14\", \r\n    \"startDate\": \"2025-01-1 00:00:00\", \r\n    \"endDate\": \"2025-12-31 23:59:59\" \r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/getMeterEnergyDay",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"getMeterEnergyDay"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/getMeterEnergyMonth (usertoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MjUsIm5hbWUiOiJyZXNvbmFuY2U5MDNAeWFob28uY29tIiwiZXhwIjoxNzY0NTM5Njc2LCJuYmYiOjE3NjQ1MTA4NzZ9.1oHloLVKCqDa12Pw-fOI7PAIrAXbQYLte8G2Re5rm90",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \r\n    \"meterId\": \"14\", \r\n    \"startDate\": \"2025-01-1 00:00:00\", \r\n    \"endDate\": \"2025-12-30 23:59:59\" \r\n}\r\n\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/getMeterEnergyMonth",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"getMeterEnergyMonth"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/getUserSaleList (usertoken)",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MjUsIm5hbWUiOiJyZXNvbmFuY2U5MDNAeWFob28uY29tIiwiZXhwIjoxNzY0NTM5Njc2LCJuYmYiOjE3NjQ1MTA4NzZ9.1oHloLVKCqDa12Pw-fOI7PAIrAXbQYLte8G2Re5rm90",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \r\n    \"startTime\": \"2025-01-01\", \r\n    \"endTime\": \"2025-12-04\" \r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/getUserSaleList",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"getUserSaleList"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "/SaleInfoByMeterId",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "token",
+						"value": "userweb_eyJ0eXBlIjoiSldUIiwiYWxnIjoiSFMyNTYifQ.eyJpZCI6MjUsIm5hbWUiOiJyZXNvbmFuY2U5MDNAeWFob28uY29tIiwiZXhwIjoxNzY0NTM5Njc2LCJuYmYiOjE3NjQ1MTA4NzZ9.1oHloLVKCqDa12Pw-fOI7PAIrAXbQYLte8G2Re5rm90",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{ \r\n    \"meterId\": \"33\", \r\n    \"startTime\": \"2025-03-01\", \r\n    \"endTime\": \"2025-12-30\" \r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://iot.solarshare.africa/basic/prepayment/app/SaleInfoByMeterId",
+					"protocol": "https",
+					"host": [
+						"iot",
+						"solarshare",
+						"africa"
+					],
+					"path": [
+						"basic",
+						"prepayment",
+						"app",
+						"SaleInfoByMeterId"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

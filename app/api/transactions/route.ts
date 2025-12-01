@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { format, subDays, addDays, parseISO } from 'date-fns';
+import { translateErrorMessage } from '@/lib/utils';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,8 +43,9 @@ export async function GET(request: NextRequest) {
 
     // Handle new API response format (success: "1")
     if (response.success !== '1') {
+      const errorMsg = translateErrorMessage(response.errorMsg || 'Failed to fetch transactions');
       return NextResponse.json(
-        { error: response.errorMsg || 'Failed to fetch transactions' },
+        { error: errorMsg },
         { status: 400 }
       );
     }

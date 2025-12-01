@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
+import { translateErrorMessage } from '@/lib/utils';
 
 // POST /api/meters/info - Get detailed meter info using roomNo
 export async function POST(request: NextRequest) {
@@ -24,10 +25,11 @@ export async function POST(request: NextRequest) {
       (response.code === 200 || response.code === 0);
 
     if (!isSuccess) {
-      const errorMsg = response.errorMsg || response.msg || 'Failed to fetch meter info';
+      const rawErrorMsg = response.errorMsg || response.msg || 'Failed to fetch meter info';
+      const errorMsg = translateErrorMessage(rawErrorMsg);
       
       // Check if token expired
-      if (errorMsg.toLowerCase().includes('token') || errorMsg.toLowerCase().includes('expired')) {
+      if (rawErrorMsg.toLowerCase().includes('token') || rawErrorMsg.toLowerCase().includes('expired')) {
         return NextResponse.json(
           { error: 'Session expired', tokenExpired: true },
           { status: 401 }
