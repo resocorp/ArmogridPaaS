@@ -216,10 +216,14 @@ export interface GetProjectListRequest {
 }
 
 export interface GetProjectListResponse {
-  success: string; // "1" for success
-  errorCode: string;
-  errorMsg: string;
-  data: {
+  // New format
+  success?: string; // "1" for success
+  errorCode?: string;
+  errorMsg?: string;
+  // Legacy format (keeping for compatibility)
+  code?: number; // 200 for success
+  msg?: string;
+  data?: {
     pagination: {
       current: number;
       pageSize: number;
@@ -227,6 +231,7 @@ export interface GetProjectListResponse {
       pageCount: number;
     };
     list: ProjectInfo[];
+    total?: number; // Sometimes provided at top level
   };
 }
 

@@ -1,5 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import type { Database } from '@/types/database';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -10,10 +9,10 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 // Client for browser/client-side operations
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
 // Admin client for server-side operations (bypasses RLS)
-export const supabaseAdmin = createClient<Database>(
+export const supabaseAdmin: SupabaseClient = createClient(
   supabaseUrl,
   supabaseServiceKey || supabaseAnonKey,
   {

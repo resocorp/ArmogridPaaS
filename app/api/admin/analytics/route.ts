@@ -17,7 +17,7 @@ interface AnalyticsData {
   
   // Energy breakdown
   energyByDay: { date: string; energy: number }[];
-  energyByMeter: { meterId: string; roomNo: string; energy: number }[];
+  energyByMeter: { meterId: string; roomNo: string; energy: number; projectName: string }[];
   
   // Power history
   powerHistory: { timestamp: string; power: number; activeMeters: number }[];

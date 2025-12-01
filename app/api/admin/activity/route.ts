@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { format, subDays } from 'date-fns';
+import type { Transaction, WebhookLog } from '@/types/database';
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,18 +12,18 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
 
     // Fetch recent transactions as activity
-    const { data: transactions, error: txError } = await supabaseAdmin
+    const { data: transactions } = await supabaseAdmin
       .from('transactions')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(limit) as { data: Transaction[] | null };
 
     // Fetch recent webhook events
-    const { data: webhooks, error: whError } = await supabaseAdmin
+    const { data: webhooks } = await supabaseAdmin
       .from('webhook_logs')
       .select('*')
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(limit) as { data: WebhookLog[] | null };
 
     // Fetch active sessions count
     const { count: activeSessions } = await supabaseAdmin

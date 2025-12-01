@@ -65,6 +65,16 @@ export interface MeterCredential {
   updated_at: string;
 }
 
+export interface PowerReading {
+  id: string;
+  recorded_at: string;
+  total_power: number;
+  active_meters: number;
+  readings_by_project: Record<string, { projectName: string; power: number; meterCount: number }> | null;
+  readings_by_meter: Array<{ meterId: string; roomNo: string; power: number; projectName: string }> | null;
+  created_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -72,27 +82,42 @@ export type Database = {
         Row: Transaction;
         Insert: Omit<Transaction, "id" | "created_at" | "updated_at" | "amount_naira">;
         Update: Partial<Omit<Transaction, "id" | "created_at" | "amount_naira">>;
+        Relationships: [];
       };
       webhook_logs: {
         Row: WebhookLog;
         Insert: Omit<WebhookLog, "id" | "created_at">;
         Update: Partial<Omit<WebhookLog, "id" | "created_at">>;
+        Relationships: [];
       };
       meter_cache: {
         Row: MeterCache;
         Insert: Omit<MeterCache, "last_synced">;
         Update: Partial<Omit<MeterCache, "meter_id">>;
+        Relationships: [];
       };
       user_sessions: {
         Row: UserSession;
         Insert: Omit<UserSession, "id" | "created_at">;
         Update: Partial<Omit<UserSession, "id" | "created_at">>;
+        Relationships: [];
       };
       meter_credentials: {
         Row: MeterCredential;
         Insert: Omit<MeterCredential, "id" | "created_at" | "updated_at">;
         Update: Partial<Omit<MeterCredential, "id" | "created_at">>;
+        Relationships: [];
+      };
+      power_readings: {
+        Row: PowerReading;
+        Insert: Omit<PowerReading, "id" | "created_at">;
+        Update: Partial<Omit<PowerReading, "id" | "created_at">>;
+        Relationships: [];
       };
     };
+    Views: {};
+    Functions: {};
+    Enums: {};
+    CompositeTypes: {};
   };
 };
