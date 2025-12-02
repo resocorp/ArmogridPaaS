@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Toaster } from "sonner";
 
@@ -21,6 +22,12 @@ export default function RootLayout({
       <body className={inter.className}>
         {children}
         <Toaster position="bottom-right" richColors duration={1500} />
+        
+        {/* Paystack Inline Script */}
+        <Script 
+          src="https://js.paystack.co/v2/inline.js" 
+          strategy="lazyOnload"
+        />
       </body>
     </html>
   );

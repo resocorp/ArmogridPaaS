@@ -12,6 +12,7 @@ import { formatNaira, isValidMeterId, cn } from '@/lib/utils';
 import { MIN_RECHARGE_AMOUNT, MAX_RECHARGE_AMOUNT, PAYSTACK_FEE } from '@/lib/constants';
 import { toast } from 'sonner';
 import type { UserMeter, MeterDetailedInfo } from '@/types/iot';
+import { initializePaystackPopup } from '@/lib/paystack-inline';
 
 // Auto-refresh interval: 10 minutes
 const REFRESH_INTERVAL = 10 * 60 * 1000;
@@ -181,6 +182,7 @@ export default function MetersPage() {
     setIsRechargeLoading(true);
 
     try {
+      // Initialize payment with backend
       const response = await fetch('/api/payment/initialize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -197,8 +199,72 @@ export default function MetersPage() {
         throw new Error(data.error || 'Failed to initialize payment');
       }
 
-      window.location.href = data.data.authorization_url;
+      const { reference, access_code } = data.data;
+      const publicKey = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
+
+      if (!publicKey) {
+        throw new Error('Paystack public key not configured');
+      }
+
+      // Calculate total amount to charge (including fees)
+      const totalAmount = feeCalculation ? feeCalculation.totalAmount * 100 : amountNum * 100;
+
+      // Open Paystack popup
+      await initializePaystackPopup({
+        key: publicKey,
+        email: rechargeEmail,
+        amount: totalAmount, // in kobo
+        ref: reference,
+        metadata: {
+          meterId,
+          rechargeAmount: amountNum,
+          custom_fields: [
+            {
+              display_name: 'Meter ID',
+              variable_name: 'meter_id',
+              value: meterId,
+            },
+          ],
+        },
+        onSuccess: async (transaction) => {
+          console.log('Payment successful:', transaction);
+          toast.success('Payment successful! Verifying...');
+          
+          // Verify payment
+          try {
+            const verifyResponse = await fetch(`/api/payment/verify/${transaction.reference}`);
+            const verifyData = await verifyResponse.json();
+
+            if (verifyData.success && verifyData.data.status === 'success') {
+              toast.success(`Meter credited successfully with ${formatNaira(amountNum * 100)}!`);
+              
+              // Reset form
+              setRechargeMeterId(null);
+              setRechargeAmount('');
+              setRechargeEmail('');
+              
+              // Refresh meters to show updated balance
+              setTimeout(() => fetchMeters(true), 2000);
+            } else {
+              toast.warning('Payment received but verification pending. Please check your meter balance.');
+            }
+          } catch (verifyError) {
+            console.error('Verification error:', verifyError);
+            toast.warning('Payment successful but verification failed. Your meter will be credited shortly.');
+          }
+          
+          setIsRechargeLoading(false);
+        },
+        onCancel: () => {
+          toast.info('Payment cancelled');
+          setIsRechargeLoading(false);
+        },
+        onLoad: (response) => {
+          console.log('Paystack loaded:', response);
+        },
+      });
     } catch (error: any) {
+      console.error('Payment initialization error:', error);
       toast.error(error.message || 'Failed to initialize payment');
       setIsRechargeLoading(false);
     }
