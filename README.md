@@ -1,4 +1,4 @@
-# ArmogridPaaS - IoT Meter Management Platform
+# ArmogridSolar - IoT Meter Management Platform
 
 A modern Next.js application for managing IoT prepaid electricity meters with integrated Paystack payment processing.
 

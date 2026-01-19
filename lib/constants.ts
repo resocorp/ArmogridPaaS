@@ -1,4 +1,4 @@
-export const APP_NAME = "ArmogridPaaS";
+export const APP_NAME = "ArmogridSolar";
 export const APP_DESCRIPTION = "IoT Meter Management Platform";
 
 // IoT Platform Constants

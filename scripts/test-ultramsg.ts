@@ -20,7 +20,7 @@ async function testUltraMsg() {
   
   const testMessage = `🧪 *UltraMsg Test Message*
 
-This is a test message from ArmogridPaaS.
+This is a test message from ArmogridSolar.
 Time: ${new Date().toISOString()}
 
 If you received this, WhatsApp notifications are working!`;

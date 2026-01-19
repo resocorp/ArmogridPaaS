@@ -748,7 +748,7 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold">Admin Panel</h1>
-              <p className="text-xs text-muted-foreground">ArmogridPaaS Management</p>
+              <p className="text-xs text-muted-foreground">ArmogridSolar Management</p>
             </div>
           </div>
           <div className="flex items-center gap-2">

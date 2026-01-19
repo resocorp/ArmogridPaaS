@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     const params = new URLSearchParams();
     params.append('token', config.ultramsg_token);
     params.append('to', config.admin_whatsapp);
-    params.append('body', `🧪 *ArmogridPaaS Test Message*\n\nThis is a test message to verify WhatsApp notifications are working.\n\nTime: ${new Date().toISOString()}\n\n✅ If you see this, notifications are configured correctly!`);
+    params.append('body', `🧪 *ArmogridSolar Test Message*\n\nThis is a test message to verify WhatsApp notifications are working.\n\nTime: ${new Date().toISOString()}\n\n✅ If you see this, notifications are configured correctly!`);
     params.append('priority', '1');
 
     console.log('[Test UltraMsg] Sending to:', url);

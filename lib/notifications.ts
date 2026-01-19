@@ -62,7 +62,7 @@ export async function sendEmailNotification(data: NotificationData): Promise<boo
     // Example with Resend:
     // const resend = new Resend(process.env.RESEND_API_KEY);
     // await resend.emails.send({
-    //   from: 'ArmogridPaaS <noreply@armogrid.com>',
+    //   from: 'ArmogridSolar <noreply@armogrid.com>',
     //   to: adminEmail,
     //   subject: `New Customer Registration - ${data.name}`,
     //   html: `...`,
@@ -147,7 +147,7 @@ export async function sendWhatsAppNotification(data: NotificationData): Promise<
 *Amount Paid:* ₦${data.amountPaid.toLocaleString()}
 *Reference:* ${data.reference}
 
-_Sent from ArmogridPaaS_`;
+_Sent from ArmogridSolar_`;
 
     const adminSent = await sendUltraMsgMessage(instanceId, token, adminWhatsApp, adminMessage);
     console.log('[Notification] Admin WhatsApp notification:', adminSent ? 'sent' : 'failed');
@@ -184,7 +184,7 @@ export async function sendCustomerWhatsAppNotification(data: NotificationData): 
 
 Hello ${data.name},
 
-Thank you for registering with ArmogridPaaS!
+Thank you for registering with ArmogridSolar!
 
 *Your Details:*
 • Room: ${data.roomNumber}
@@ -198,7 +198,7 @@ Our team will contact you within 24-48 hours to schedule your meter installation
 For questions, contact us:
 📞 +2347035090096
 
-_Thank you for choosing ArmogridPaaS!_`;
+_Thank you for choosing ArmogridSolar!_`;
 
     const customerSent = await sendUltraMsgMessage(instanceId, token, customerPhone, customerMessage);
     console.log('[Notification] Customer WhatsApp notification:', customerSent ? 'sent' : 'failed');

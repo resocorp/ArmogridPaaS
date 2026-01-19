@@ -1,4 +1,4 @@
-# ArmogridPaaS Deployment Guide
+# ArmogridSolar Deployment Guide
 
 ## 🚀 Quick Start
 
@@ -190,4 +190,4 @@ For technical support:
 
 ---
 
-**🎉 Congratulations! Your ArmogridPaaS MVP is ready for production use!**
+**🎉 Congratulations! Your ArmogridSolar MVP is ready for production use!**

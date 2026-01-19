@@ -287,7 +287,7 @@ export default function HomePage() {
             <div className="w-10 h-10 bg-armogrid-red rounded-lg flex items-center justify-center shadow-lg shadow-armogrid-red/30">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">ArmogridPaaS</span>
+            <span className="text-2xl font-bold text-white">ArmogridSolar</span>
           </div>
           <Link href="/login">
             <Button className="bg-white text-armogrid-navy hover:bg-white/90 shadow-lg font-semibold">
@@ -297,69 +297,11 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Hero Section */}
-      <main className="container mx-auto px-4 py-16">
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-8 lg:py-16">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left Column - Hero Text */}
-          <div className="text-white space-y-8">
-            <div className="space-y-4">
-              <div className="inline-block px-4 py-2 bg-armogrid-red/20 backdrop-blur-sm rounded-full border border-armogrid-red/30">
-                <span className="text-sm font-semibold text-armogrid-red">⚡ Prepaid Electricity Made Easy</span>
-              </div>
-              <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
-                Manage Your Electricity<br />
-                <span className="text-armogrid-red bg-gradient-to-r from-armogrid-red to-orange-500 bg-clip-text text-transparent">
-                  Smarter & Faster
-                </span>
-              </h1>
-              <p className="text-xl text-white/90 leading-relaxed">
-                Quick meter recharge, real-time monitoring, and complete control over your prepaid electricity meters.
-              </p>
-            </div>
-            
-            {/* Features */}
-            <div className="grid sm:grid-cols-2 gap-4 pt-4">
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Instant Recharge</h3>
-                  <p className="text-sm text-white/70">Credit your meter in seconds</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Usage Analytics</h3>
-                  <p className="text-sm text-white/70">Track your consumption</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
-                  <Shield className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Secure Payments</h3>
-                  <p className="text-sm text-white/70">Powered by Paystack</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
-                  <Zap className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Remote Control</h3>
-                  <p className="text-sm text-white/70">Manage meters anywhere</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Tabbed Forms */}
-          <Card className="shadow-2xl border-white/20 bg-white/95 backdrop-blur-xl">
+          {/* Quick Recharge/Signup Card - Shows FIRST on mobile */}
+          <Card className="shadow-2xl border-white/20 bg-white/95 backdrop-blur-xl order-first lg:order-last">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <CardHeader className="space-y-4 pb-4">
                 <TabsList className="grid w-full grid-cols-2">
@@ -425,9 +367,6 @@ export default function HomePage() {
                         className="h-11"
                         required
                       />
-                      <p className="text-xs text-muted-foreground">
-                        Min: ₦{MIN_RECHARGE_AMOUNT.toLocaleString()} • Max: ₦{MAX_RECHARGE_AMOUNT.toLocaleString()}
-                      </p>
                     </div>
 
                     {feeCalculation && (
@@ -606,6 +545,64 @@ export default function HomePage() {
               </CardContent>
             </Tabs>
           </Card>
+
+          {/* Hero Text - Shows SECOND on mobile */}
+          <div className="text-white space-y-8 order-last lg:order-first">
+            <div className="space-y-4">
+              <div className="inline-block px-4 py-2 bg-armogrid-red/20 backdrop-blur-sm rounded-full border border-armogrid-red/30">
+                <span className="text-sm font-semibold text-armogrid-red">⚡ Prepaid Electricity Made Easy</span>
+              </div>
+              <h1 className="text-5xl lg:text-6xl font-bold leading-tight">
+                Manage Your Electricity<br />
+                <span className="text-armogrid-red bg-gradient-to-r from-armogrid-red to-orange-500 bg-clip-text text-transparent">
+                  Smarter & Faster
+                </span>
+              </h1>
+              <p className="text-xl text-white/90 leading-relaxed">
+                Quick meter recharge, real-time monitoring, and complete control over your prepaid electricity meters.
+              </p>
+            </div>
+            
+            {/* Features */}
+            <div className="grid sm:grid-cols-2 gap-4 pt-4">
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
+                  <Clock className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Instant Recharge</h3>
+                  <p className="text-sm text-white/70">Credit your meter in seconds</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
+                  <TrendingUp className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Usage Analytics</h3>
+                  <p className="text-sm text-white/70">Track your consumption</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Secure Payments</h3>
+                  <p className="text-sm text-white/70">Powered by Paystack</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 hover:bg-white/10 transition-all duration-300 hover:scale-105">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-armogrid-red to-orange-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-armogrid-red/30">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-lg">Remote Control</h3>
+                  <p className="text-sm text-white/70">Manage meters anywhere</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Quick Stats */}
@@ -628,7 +625,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t border-white/10 mt-16">
         <div className="container mx-auto px-4 py-8 text-center text-white/60">
-          <p>&copy; 2025 Armogrid. All rights reserved.</p>
+          <p>&copy; 2025 ArmogridSolar. All rights reserved.</p>
         </div>
       </footer>
     </div>

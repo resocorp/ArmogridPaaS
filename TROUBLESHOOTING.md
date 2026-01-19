@@ -185,7 +185,7 @@ PAYSTACK_SECRET_KEY=your_secret_key
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_APP_NAME=ArmogridPaaS
+NEXT_PUBLIC_APP_NAME=ArmogridSolar
 ```
 
 ### SSL Certificate Issues

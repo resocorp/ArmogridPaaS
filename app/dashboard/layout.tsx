@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
                 <Zap className="w-5 h-5 text-primary-foreground" />
               </div>
-              <span className="font-bold text-lg hidden sm:inline">ArmogridPaaS</span>
+              <span className="font-bold text-lg hidden sm:inline">ArmogridSolar</span>
             </Link>
           </div>
 
