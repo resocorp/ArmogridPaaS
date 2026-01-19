@@ -90,7 +90,8 @@ export async function initializePayment(
   email: string,
   amount: number, // in kobo
   reference: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, any>,
+  callbackUrl?: string
 ): Promise<InitializePaymentResponse> {
   const response = await fetch('https://api.paystack.co/transaction/initialize', {
     method: 'POST',
@@ -104,7 +105,7 @@ export async function initializePayment(
       reference,
       currency: 'NGN',
       metadata,
-      callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
+      callback_url: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL}/payment/success`,
     }),
   });
 

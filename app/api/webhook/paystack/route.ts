@@ -5,6 +5,7 @@ import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateSaleId, translateErrorMessage } from '@/lib/utils';
 import { BUY_TYPE } from '@/lib/constants';
+import { notifyAdminOfRegistration } from '@/lib/notifications';
 import type { PaystackWebhookEvent } from '@/types/payment';
 
 export async function POST(request: NextRequest) {
@@ -54,6 +55,14 @@ export async function POST(request: NextRequest) {
     }
 
     const { reference, status, metadata } = event.data;
+    
+    // Check if this is a customer registration payment
+    if (metadata?.type === 'customer_registration') {
+      console.log('[Webhook] Processing customer registration payment');
+      await processRegistrationPayment(reference, status, metadata);
+      return NextResponse.json({ received: true });
+    }
+
     const meterId = metadata?.meterId;
     console.log('[Webhook] Processing charge.success for meterId:', meterId, 'status:', status);
 
@@ -190,4 +199,83 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Process customer registration payment
+ */
+async function processRegistrationPayment(
+  reference: string,
+  status: string,
+  metadata: any
+) {
+  console.log('[Webhook] Processing registration payment:', reference);
+
+  // Get registration from database
+  const { data: registration, error: regError } = await supabaseAdmin
+    .from('customer_registrations')
+    .select('*')
+    .eq('paystack_reference', reference)
+    .single();
+
+  if (regError || !registration) {
+    console.error('[Webhook] Registration not found:', reference);
+    return;
+  }
+
+  // Skip if already processed
+  if (registration.payment_status === 'success') {
+    console.log('[Webhook] Registration already processed, skipping');
+    return;
+  }
+
+  if (status === 'success') {
+    console.log('[Webhook] Registration payment successful');
+
+    // Update registration status
+    await supabaseAdmin
+      .from('customer_registrations')
+      .update({
+        payment_status: 'success',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', registration.id);
+
+    // Send admin notifications
+    console.log('[Webhook] Sending admin notifications...');
+    const notificationResult = await notifyAdminOfRegistration({
+      name: registration.name,
+      email: registration.email,
+      phone: registration.phone,
+      roomNumber: registration.room_number,
+      locationName: registration.location_name || metadata?.locationName || 'Unknown',
+      amountPaid: registration.amount_paid / 100,
+      reference,
+    });
+
+    // Update notification status
+    await supabaseAdmin
+      .from('customer_registrations')
+      .update({
+        admin_notified: notificationResult.email || notificationResult.whatsapp,
+      })
+      .eq('id', registration.id);
+
+    console.log('[Webhook] Registration processed successfully');
+  } else {
+    console.log('[Webhook] Registration payment failed');
+    await supabaseAdmin
+      .from('customer_registrations')
+      .update({
+        payment_status: 'failed',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', registration.id);
+  }
+
+  // Update webhook log
+  await supabaseAdmin
+    .from('webhook_logs')
+    .update({ processed: true })
+    .eq('reference', reference);
 }

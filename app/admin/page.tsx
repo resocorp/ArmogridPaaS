@@ -58,7 +58,13 @@ import {
   EyeOff,
   Info,
   Bolt,
-  CircuitBoard
+  CircuitBoard,
+  Settings,
+  UserPlus,
+  Mail,
+  Phone,
+  MapPin,
+  Save
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -126,6 +132,29 @@ interface ActivityItem {
   error?: string;
 }
 
+interface Registration {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  room_number: string;
+  location_id: string;
+  location_name: string | null;
+  amount_paid: number;
+  paystack_reference: string | null;
+  payment_status: 'pending' | 'success' | 'failed';
+  admin_notified: boolean;
+  created_at: string;
+}
+
+interface AdminSettings {
+  signup_amount: string;
+  admin_email: string;
+  admin_whatsapp: string;
+  ultramsg_instance_id: string;
+  ultramsg_token: string;
+}
+
 export default function AdminPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -176,6 +205,23 @@ export default function AdminPage() {
   // Meter details dialog
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [detailsMeter, setDetailsMeter] = useState<any>(null);
+
+  // Registrations state
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [registrationsLoading, setRegistrationsLoading] = useState(false);
+  const [registrationCounts, setRegistrationCounts] = useState({ total: 0, pending: 0, success: 0, failed: 0 });
+  const [registrationFilter, setRegistrationFilter] = useState('all');
+
+  // Settings state
+  const [adminSettings, setAdminSettings] = useState<AdminSettings>({
+    signup_amount: '2000',
+    admin_email: '',
+    admin_whatsapp: '',
+    ultramsg_instance_id: '',
+    ultramsg_token: '',
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   useEffect(() => {
     checkAdminAuth();
@@ -436,6 +482,67 @@ export default function AdminPage() {
     }
   };
 
+  const loadRegistrations = async () => {
+    setRegistrationsLoading(true);
+    try {
+      const response = await fetch('/api/admin/registrations?limit=100');
+      const data = await response.json();
+      if (data.success) {
+        setRegistrations(data.data);
+        setRegistrationCounts(data.counts);
+      }
+    } catch (error) {
+      console.error('Failed to load registrations:', error);
+      toast.error('Failed to load registrations');
+    } finally {
+      setRegistrationsLoading(false);
+    }
+  };
+
+  const loadSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const response = await fetch('/api/admin/settings');
+      const data = await response.json();
+      if (data.success) {
+        setAdminSettings({
+          signup_amount: data.data.signup_amount || '2000',
+          admin_email: data.data.admin_email || '',
+          admin_whatsapp: data.data.admin_whatsapp || '',
+          ultramsg_instance_id: data.data.ultramsg_instance_id || '',
+          ultramsg_token: data.data.ultramsg_token || '',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+      toast.error('Failed to load settings');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: adminSettings }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success('Settings saved successfully');
+      } else {
+        toast.error(data.error || 'Failed to save settings');
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      toast.error('Failed to save settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
     if (tab === 'meters') {
@@ -447,6 +554,10 @@ export default function AdminPage() {
       }
     } else if (tab === 'transactions' && transactions.length === 0) {
       loadTransactions();
+    } else if (tab === 'registrations' && registrations.length === 0) {
+      loadRegistrations();
+    } else if (tab === 'settings') {
+      loadSettings();
     }
   };
 
@@ -658,7 +769,7 @@ export default function AdminPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full max-w-lg grid-cols-4">
+          <TabsList className="grid w-full max-w-3xl grid-cols-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -674,6 +785,14 @@ export default function AdminPage() {
             <TabsTrigger value="transactions" className="flex items-center gap-2">
               <CreditCard className="w-4 h-4" />
               Transactions
+            </TabsTrigger>
+            <TabsTrigger value="registrations" className="flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Registrations
+            </TabsTrigger>
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -1268,6 +1387,273 @@ export default function AdminPage() {
                         ))}
                       </TableBody>
                     </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Registrations Tab */}
+          <TabsContent value="registrations" className="space-y-4">
+            {/* Registration Summary */}
+            <div className="grid gap-4 md:grid-cols-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Total Registrations</p>
+                      <p className="text-2xl font-bold">{registrationCounts.total}</p>
+                    </div>
+                    <UserPlus className="w-8 h-8 text-muted-foreground/50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Successful</p>
+                      <p className="text-2xl font-bold text-green-500">{registrationCounts.success}</p>
+                    </div>
+                    <CheckCircle2 className="w-8 h-8 text-green-500/50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Pending</p>
+                      <p className="text-2xl font-bold text-yellow-500">{registrationCounts.pending}</p>
+                    </div>
+                    <Clock className="w-8 h-8 text-yellow-500/50" />
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Failed</p>
+                      <p className="text-2xl font-bold text-red-500">{registrationCounts.failed}</p>
+                    </div>
+                    <AlertCircle className="w-8 h-8 text-red-500/50" />
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <UserPlus className="w-5 h-5" />
+                      Customer Registrations
+                    </CardTitle>
+                    <CardDescription>New customer sign-ups for prepaid electricity</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select 
+                      className="px-3 py-2 rounded-md border bg-background text-sm"
+                      value={registrationFilter}
+                      onChange={(e) => setRegistrationFilter(e.target.value)}
+                    >
+                      <option value="all">All Status</option>
+                      <option value="success">Successful</option>
+                      <option value="pending">Pending</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                    <Button variant="outline" size="icon" onClick={loadRegistrations} disabled={registrationsLoading}>
+                      <RefreshCw className={`w-4 h-4 ${registrationsLoading ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {registrationsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : registrations.filter(r => registrationFilter === 'all' || r.payment_status === registrationFilter).length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <UserPlus className="w-16 h-16 mx-auto mb-4 opacity-30" />
+                    <p className="text-lg font-medium">No registrations found</p>
+                    <p className="text-sm">Customer sign-ups will appear here</p>
+                  </div>
+                ) : (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Contact</TableHead>
+                          <TableHead>Room / Location</TableHead>
+                          <TableHead>Amount</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {registrations
+                          .filter(r => registrationFilter === 'all' || r.payment_status === registrationFilter)
+                          .map((reg) => (
+                          <TableRow key={reg.id}>
+                            <TableCell className="text-sm">
+                              {format(new Date(reg.created_at), 'MMM d, yyyy HH:mm')}
+                            </TableCell>
+                            <TableCell className="font-medium">{reg.name}</TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div className="flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {reg.email}
+                                </div>
+                                <div className="flex items-center gap-1 text-muted-foreground">
+                                  <Phone className="w-3 h-3" />
+                                  {reg.phone}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-sm">
+                                <div>{reg.room_number}</div>
+                                <div className="text-muted-foreground flex items-center gap-1">
+                                  <MapPin className="w-3 h-3" />
+                                  {reg.location_name || reg.location_id}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              ₦{(reg.amount_paid / 100).toLocaleString()}
+                            </TableCell>
+                            <TableCell>{getStatusBadge(reg.payment_status)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  System Settings
+                </CardTitle>
+                <CardDescription>Configure sign-up fees and notification settings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {settingsLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Sign-up Fee */}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <DollarSign className="w-5 h-5" />
+                        Sign-up Configuration
+                      </h3>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Sign-up / Installation Fee (₦)</label>
+                          <Input 
+                            type="number"
+                            placeholder="2000"
+                            value={adminSettings.signup_amount}
+                            onChange={(e) => setAdminSettings(prev => ({ ...prev, signup_amount: e.target.value }))}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Amount customers pay when signing up (in Naira)
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Email Notification */}
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Mail className="w-5 h-5" />
+                        Email Notifications
+                      </h3>
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Admin Email Address</label>
+                        <Input 
+                          type="email"
+                          placeholder="admin@example.com"
+                          value={adminSettings.admin_email}
+                          onChange={(e) => setAdminSettings(prev => ({ ...prev, admin_email: e.target.value }))}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Email to receive notifications for new registrations
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* WhatsApp Notification */}
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="text-lg font-semibold flex items-center gap-2">
+                        <Phone className="w-5 h-5" />
+                        WhatsApp Notifications (UltraMsg)
+                      </h3>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">Admin WhatsApp Number</label>
+                          <Input 
+                            type="text"
+                            placeholder="+2347035090096"
+                            value={adminSettings.admin_whatsapp}
+                            onChange={(e) => setAdminSettings(prev => ({ ...prev, admin_whatsapp: e.target.value }))}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            WhatsApp number to receive notifications (with country code)
+                          </p>
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">UltraMsg Instance ID</label>
+                          <Input 
+                            type="text"
+                            placeholder="instance123"
+                            value={adminSettings.ultramsg_instance_id}
+                            onChange={(e) => setAdminSettings(prev => ({ ...prev, ultramsg_instance_id: e.target.value }))}
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <label className="text-sm font-medium">UltraMsg API Token</label>
+                          <Input 
+                            type="password"
+                            placeholder="Your UltraMsg token"
+                            value={adminSettings.ultramsg_token}
+                            onChange={(e) => setAdminSettings(prev => ({ ...prev, ultramsg_token: e.target.value }))}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            Get your UltraMsg credentials from{' '}
+                            <a href="https://ultramsg.com" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                              ultramsg.com
+                            </a>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Save Button */}
+                    <div className="pt-4 border-t flex justify-end">
+                      <Button onClick={saveSettings} disabled={savingSettings}>
+                        {savingSettings ? (
+                          <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4 mr-2" />
+                        )}
+                        Save Settings
+                      </Button>
+                    </div>
                   </div>
                 )}
               </CardContent>

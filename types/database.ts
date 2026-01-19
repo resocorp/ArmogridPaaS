@@ -75,6 +75,32 @@ export interface PowerReading {
   created_at: string;
 }
 
+export interface AdminSetting {
+  id: string;
+  key: string;
+  value: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerRegistration {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  room_number: string;
+  location_id: string;
+  location_name: string | null;
+  amount_paid: number;
+  paystack_reference: string | null;
+  payment_status: 'pending' | 'success' | 'failed';
+  admin_notified: boolean;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -112,6 +138,18 @@ export type Database = {
         Row: PowerReading;
         Insert: Omit<PowerReading, "id" | "created_at">;
         Update: Partial<Omit<PowerReading, "id" | "created_at">>;
+        Relationships: [];
+      };
+      admin_settings: {
+        Row: AdminSetting;
+        Insert: Omit<AdminSetting, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<AdminSetting, "id" | "created_at">>;
+        Relationships: [];
+      };
+      customer_registrations: {
+        Row: CustomerRegistration;
+        Insert: Omit<CustomerRegistration, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<CustomerRegistration, "id" | "created_at">>;
         Relationships: [];
       };
     };
