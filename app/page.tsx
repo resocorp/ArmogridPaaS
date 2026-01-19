@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { Zap, Shield, TrendingUp, Clock, Info, UserPlus, MapPin, Phone, Mail, User, Home } from 'lucide-react';
+import { Zap, Shield, TrendingUp, Clock, Info, UserPlus, MapPin, Phone, Mail, User, Home, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -623,9 +623,88 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 mt-16">
-        <div className="container mx-auto px-4 py-8 text-center text-white/60">
-          <p>&copy; 2025 ArmogridSolar. All rights reserved.</p>
+      <footer className="border-t border-white/10 mt-16 bg-black/20 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid md:grid-cols-4 gap-8">
+            {/* Brand */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 bg-armogrid-red rounded-lg flex items-center justify-center shadow-lg shadow-armogrid-red/30">
+                  <Zap className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-xl font-bold text-white">ArmogridSolar</span>
+              </div>
+              <p className="text-white/60 text-sm">
+                Smart IoT prepaid meter solutions for efficient energy management. Recharge instantly, track usage, and control your power.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div className="space-y-4">
+              <h3 className="text-white font-semibold">Quick Links</h3>
+              <ul className="space-y-2 text-white/60 text-sm">
+                <li>
+                  <Link href="/login" className="hover:text-white transition-colors">Login</Link>
+                </li>
+                <li>
+                  <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">FAQs</a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Services */}
+            <div className="space-y-4">
+              <h3 className="text-white font-semibold">Services</h3>
+              <ul className="space-y-2 text-white/60 text-sm">
+                <li>Quick Meter Recharge</li>
+                <li>New Meter Installation</li>
+                <li>Usage Analytics</li>
+                <li>Remote Meter Control</li>
+              </ul>
+            </div>
+
+            {/* Contact */}
+            <div className="space-y-4">
+              <h3 className="text-white font-semibold">Contact Us</h3>
+              <ul className="space-y-3 text-white/60 text-sm">
+                <li>
+                  <a href="tel:+2347035090096" className="flex items-center gap-2 hover:text-white transition-colors">
+                    <Phone className="w-4 h-4 text-armogrid-red" />
+                    +234 703 509 0096
+                  </a>
+                </li>
+                <li>
+                  <a href="https://wa.me/2347035090096" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-white transition-colors">
+                    <MessageCircle className="w-4 h-4 text-green-500" />
+                    WhatsApp: +234 703 509 0096
+                  </a>
+                </li>
+                <li>
+                  <a href="mailto:info@armogrid.com" className="flex items-center gap-2 hover:text-white transition-colors">
+                    <Mail className="w-4 h-4 text-armogrid-red" />
+                    info@armogrid.com
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-white/10 mt-10 pt-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-white/60 text-sm">
+              &copy; {new Date().getFullYear()} ArmogridSolar. All rights reserved.
+            </p>
+            <div className="flex items-center gap-6 text-white/60 text-sm">
+              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms</a>
+            </div>
+          </div>
         </div>
       </footer>
     </div>
