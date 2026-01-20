@@ -32,7 +32,7 @@ export default function HomePage() {
   }>({ isValidating: false, found: null, roomNo: null });
 
   // Sign-up form state
-  const [activeTab, setActiveTab] = useState('recharge');
+  const [activeTab, setActiveTab] = useState('signup');
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
@@ -305,14 +305,14 @@ export default function HomePage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <CardHeader className="space-y-4 pb-4">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="recharge" className="flex items-center gap-2">
-                    <Zap className="w-4 h-4" />
-                    Quick Recharge
-                  </TabsTrigger>
                   <TabsTrigger value="signup" className="flex items-center gap-2 relative overflow-visible">
                     <span className="absolute inset-0 rounded-md animate-pulse-glow" />
                     <UserPlus className="w-4 h-4 relative z-10" />
                     <span className="relative z-10">Sign Up</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="recharge" className="flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    Quick Recharge
                   </TabsTrigger>
                 </TabsList>
               </CardHeader>
