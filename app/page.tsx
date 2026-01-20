@@ -650,10 +650,10 @@ export default function HomePage() {
                   <Link href="/dashboard" className="hover:text-white transition-colors">Dashboard</Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">FAQs</a>
+                  <Link href="/faqs" className="hover:text-white transition-colors">FAQs</Link>
                 </li>
                 <li>
-                  <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
+                  <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
                 </li>
               </ul>
             </div>
@@ -701,8 +701,7 @@ export default function HomePage() {
               &copy; {new Date().getFullYear()} ArmogridSolar. All rights reserved.
             </p>
             <div className="flex items-center gap-6 text-white/60 text-sm">
-              <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             </div>
           </div>
         </div>
