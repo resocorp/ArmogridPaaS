@@ -3,6 +3,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { generatePaymentReference, initializePayment, calculatePaystackFee } from '@/lib/paystack';
 import { nairaToKobo } from '@/lib/utils';
 
+// Force dynamic rendering to prevent caching
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function POST(request: NextRequest) {
   try {
     console.log('\n[Signup] ===== Starting customer registration =====');
@@ -52,7 +56,7 @@ export async function POST(request: NextRequest) {
       .eq('key', 'signup_amount')
       .single();
 
-    const signupAmountNaira = parseInt(settingData?.value || '50000');
+    const signupAmountNaira = parseInt(settingData?.value || '2000');
     console.log('[Signup] Signup amount (Naira):', signupAmountNaira);
 
     // Calculate Paystack fees
