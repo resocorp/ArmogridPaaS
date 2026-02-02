@@ -49,17 +49,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get signup amount from settings
+    // Parse room numbers (comma-separated)
+    const roomNumbers = roomNumber.split(',').map((r: string) => r.trim()).filter((r: string) => r.length > 0);
+    const roomCount = roomNumbers.length;
+    
+    if (roomCount === 0) {
+      return NextResponse.json(
+        { error: 'At least one room number is required' },
+        { status: 400 }
+      );
+    }
+    console.log('[Signup] Room numbers:', roomNumbers, 'Count:', roomCount);
+
+    // Get signup amount from settings (per room)
     const { data: settingData } = await supabaseAdmin
       .from('admin_settings')
       .select('value')
       .eq('key', 'signup_amount')
       .single();
 
-    const signupAmountNaira = parseInt(settingData?.value || '2000');
-    console.log('[Signup] Signup amount (Naira):', signupAmountNaira);
+    const unitAmountNaira = parseInt(settingData?.value || '2000');
+    const signupAmountNaira = unitAmountNaira * roomCount;
+    console.log('[Signup] Unit amount:', unitAmountNaira, 'Total for', roomCount, 'rooms:', signupAmountNaira);
 
-    // Calculate Paystack fees
+    // Calculate Paystack fees on total amount
     const feeBreakdown = calculatePaystackFee(signupAmountNaira, 'local');
     const totalAmountKobo = nairaToKobo(feeBreakdown.totalAmount);
     const signupAmountKobo = nairaToKobo(signupAmountNaira);
@@ -74,14 +87,14 @@ export async function POST(request: NextRequest) {
     const reference = generatePaymentReference();
     console.log('[Signup] Generated reference:', reference);
 
-    // Create pending registration in database
+    // Create pending registration in database (store all rooms as comma-separated)
     const { data: registration, error: dbError } = await supabaseAdmin
       .from('customer_registrations')
       .insert({
         name: name.trim(),
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
-        room_number: roomNumber.trim(),
+        room_number: roomNumbers.join(', '),
         location_id: locationId,
         location_name: locationName || null,
         amount_paid: signupAmountKobo,
@@ -109,16 +122,19 @@ export async function POST(request: NextRequest) {
         registrationId: registration.id,
         name,
         phone,
-        roomNumber,
+        roomNumbers,
+        roomCount,
         locationId,
         locationName,
+        unitAmount: unitAmountNaira,
         signupAmount: signupAmountNaira,
         paystackFee: feeBreakdown.fee,
         totalCharged: feeBreakdown.totalAmount,
         custom_fields: [
           { display_name: 'Name', variable_name: 'name', value: name },
           { display_name: 'Phone', variable_name: 'phone', value: phone },
-          { display_name: 'Room Number', variable_name: 'room_number', value: roomNumber },
+          { display_name: 'Room(s)', variable_name: 'room_number', value: roomNumbers.join(', ') },
+          { display_name: 'Room Count', variable_name: 'room_count', value: String(roomCount) },
           { display_name: 'Location', variable_name: 'location', value: locationName || locationId },
         ],
       },
@@ -139,6 +155,8 @@ export async function POST(request: NextRequest) {
         access_code: paymentResponse.data.access_code,
         reference: paymentResponse.data.reference,
         registrationId: registration.id,
+        roomCount,
+        unitAmount: unitAmountNaira,
         amount: signupAmountNaira,
         fee: feeBreakdown.fee,
         total: feeBreakdown.totalAmount,

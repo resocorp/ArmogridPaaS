@@ -262,21 +262,31 @@ export default function HomePage() {
     }
   };
 
-  // Calculate signup fee breakdown
+  // Parse room numbers from comma-separated input
+  const roomCount = useMemo(() => {
+    if (!signupRoom.trim()) return 0;
+    const rooms = signupRoom.split(',').map(r => r.trim()).filter(r => r.length > 0);
+    return rooms.length;
+  }, [signupRoom]);
+
+  // Calculate signup fee breakdown (multiplied by number of rooms)
   const signupFeeCalculation = useMemo(() => {
-    if (!signupAmount) return null;
+    if (!signupAmount || roomCount === 0) return null;
     
-    const percentageFee = Math.ceil(signupAmount * PAYSTACK_FEE.LOCAL_PERCENTAGE);
-    const flatFee = signupAmount >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
+    const baseAmount = signupAmount * roomCount;
+    const percentageFee = Math.ceil(baseAmount * PAYSTACK_FEE.LOCAL_PERCENTAGE);
+    const flatFee = baseAmount >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
     let fee = percentageFee + flatFee;
     fee = Math.min(fee, PAYSTACK_FEE.LOCAL_CAP);
     
     return {
-      amount: signupAmount,
+      amount: baseAmount,
+      unitAmount: signupAmount,
+      roomCount,
       fee,
-      total: signupAmount + fee,
+      total: baseAmount + fee,
     };
-  }, [signupAmount]);
+  }, [signupAmount, roomCount]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-armogrid-navy via-armogrid-blue to-armogrid-navy">
@@ -480,17 +490,22 @@ export default function HomePage() {
 
                     <div className="space-y-2">
                       <Label htmlFor="signupRoom" className="text-sm font-semibold flex items-center gap-2">
-                        <Home className="w-4 h-4" /> Room Number
+                        <Home className="w-4 h-4" /> Room Number(s)
                       </Label>
                       <Input
                         id="signupRoom"
                         type="text"
-                        placeholder="e.g., A101, Flat 2"
+                        placeholder="e.g., A101, A102, A103"
                         value={signupRoom}
                         onChange={(e) => setSignupRoom(e.target.value)}
                         className="h-11"
                         required
                       />
+                      {roomCount > 1 && (
+                        <p className="text-xs text-blue-600 font-medium">
+                          {roomCount} rooms selected
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -517,7 +532,7 @@ export default function HomePage() {
                     </div>
 
                     {signupFeeCalculation && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <Info className="w-4 h-4 text-green-600" />
@@ -525,6 +540,11 @@ export default function HomePage() {
                           </div>
                           <span className="text-lg font-bold text-green-900">₦{signupFeeCalculation.total.toLocaleString()}</span>
                         </div>
+                        {signupFeeCalculation.roomCount > 1 && (
+                          <p className="text-xs text-green-700">
+                            ₦{signupFeeCalculation.unitAmount.toLocaleString()} × {signupFeeCalculation.roomCount} rooms + ₦{signupFeeCalculation.fee.toLocaleString()} fee
+                          </p>
+                        )}
                       </div>
                     )}
 
