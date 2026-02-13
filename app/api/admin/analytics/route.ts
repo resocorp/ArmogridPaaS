@@ -1,47 +1,125 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, getAdminToken } from '@/lib/auth';
+import { requireAdmin, getAdminToken, getUserToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
+interface MeterStatus {
+  normal: number;
+  offline: number;
+  alarm: number;
+  total: number;
+}
+
 interface AnalyticsData {
-  // Summary metrics
   totalRevenue: number;
   totalEnergy: number;
   livePower: number;
-  activeMeters: number;
-  totalMeters: number;
-  
-  // Revenue breakdown
+  meterStatus: MeterStatus;
   revenueByDay: { date: string; revenue: number }[];
   revenueByProject: { projectId: string; projectName: string; revenue: number }[];
-  
-  // Energy breakdown
   energyByDay: { date: string; energy: number }[];
   energyByMeter: { meterId: string; roomNo: string; energy: number; projectName: string }[];
-  
-  // Power history
   powerHistory: { timestamp: string; power: number; activeMeters: number }[];
-  
-  // Rankings
   topConsumers: { roomNo: string; meterId: string; energy: number; projectName: string }[];
-  topRevenue: { roomNo: string; revenue: number; projectName: string }[];
-  
-  // Alerts
-  lowBalanceMeters: { roomNo: string; balance: number; meterId: string }[];
+  topRevenue: { roomNo: string; revenue: number; projectName: string; meterId: string }[];
+  lowBalanceMeters: { roomNo: string; balance: number; meterId: string; alarmThreshold: number }[];
   forcedModeMeters: { roomNo: string; controlMode: string; meterId: string }[];
   offlineMeters: { roomNo: string; meterId: string }[];
-  
-  // Live power by meter
   livePowerByMeter: { roomNo: string; meterId: string; power: number; projectName: string }[];
 }
 
-// GET - Fetch analytics data
+interface MeterInfo {
+  meterId: string;
+  roomNo: string;
+  projectId: string;
+  projectName: string;
+  balance: number;
+  power: number;
+  isOnline: boolean;
+  isAlarm: boolean;
+  alarmA: number;
+  controlMode: string;
+  switchSta: string;
+}
+
+// Helper to process a single meter with all its data in parallel
+async function processMeter(
+  room: any,
+  projectId: string,
+  projectName: string,
+  userToken: string,
+  adminToken: string,
+  startDate: string,
+  endDate: string
+) {
+  const roomNo: string = room.name || room.roomNo || '';
+  if (!roomNo) return null;
+
+  try {
+    // Fetch meter info first (required to get meterId)
+    const meterInfoResponse = await iotClient.getMeterInfo(roomNo, userToken);
+    const meterSuccess = meterInfoResponse.success === '1' || 
+                        meterInfoResponse.code === 200 || 
+                        meterInfoResponse.code === 0;
+
+    if (!meterSuccess || !meterInfoResponse.data) {
+      return {
+        roomNo,
+        meterId: String(room.meterId || ''),
+        status: 'offline' as const,
+        projectId,
+        projectName,
+      };
+    }
+
+    const meterData = meterInfoResponse.data;
+    const meterId = String(meterData.meterId);
+    const balance = parseFloat(meterData.balance || '0');
+    const power = parseFloat(meterData.p || '0');
+    const alarmA = parseFloat(meterData.alarmA || '100');
+    const isOnline = meterData.unConnnect === 0;
+    const isAlarm = balance < alarmA;
+
+    // Fetch sales and energy data in parallel
+    const [salesResult, energyResult] = await Promise.all([
+      iotClient.getSaleInfoByMeterId(meterId, startDate, endDate, adminToken).catch(() => null),
+      iotClient.getMeterEnergyDay(meterId, `${startDate} 00:00:00`, `${endDate} 23:59:59`, adminToken).catch(() => null),
+    ]);
+
+    return {
+      roomNo,
+      meterId,
+      projectId,
+      projectName,
+      balance,
+      power,
+      alarmA,
+      isOnline,
+      isAlarm,
+      controlMode: meterData.controlMode,
+      switchSta: meterData.switchSta,
+      status: !isOnline ? 'offline' as const : isAlarm ? 'alarm' as const : 'normal' as const,
+      sales: salesResult,
+      energy: energyResult,
+    };
+  } catch (e) {
+    return {
+      roomNo,
+      meterId: String(room.meterId || ''),
+      status: 'offline' as const,
+      projectId,
+      projectName,
+    };
+  }
+}
+
+// GET - Fetch analytics data with live IoT data (OPTIMIZED with parallel processing)
 export async function GET(request: NextRequest) {
   try {
     await requireAdmin();
-    const token = await getAdminToken();
+    const adminToken = await getAdminToken();
     
-    if (!token) {
+    if (!adminToken) {
       return NextResponse.json(
         { error: 'No admin token available' },
         { status: 401 }
@@ -51,192 +129,180 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate') || getDefaultStartDate();
     const endDate = searchParams.get('endDate') || getDefaultEndDate();
-    const projectIdsParam = searchParams.get('projectIds'); // Comma-separated project IDs
+    const projectIdsParam = searchParams.get('projectIds');
     
-    // Parse project IDs filter
     const projectIdFilter = projectIdsParam 
       ? new Set(projectIdsParam.split(',').filter(Boolean))
       : null;
 
-    console.log(`[Analytics] Fetching data from ${startDate} to ${endDate}`);
-    if (projectIdFilter) {
-      console.log(`[Analytics] Filtering by projects: ${Array.from(projectIdFilter).join(', ')}`);
+    console.log(`[Analytics] Fetching live data from ${startDate} to ${endDate}`);
+    const startTime = Date.now();
+
+    // Get user token for APIs that require user authentication
+    let userToken: string;
+    try {
+      userToken = await getUserToken();
+    } catch (e) {
+      console.error('[Analytics] Failed to get user token, falling back to admin token');
+      userToken = adminToken;
     }
 
-    // Fetch all linked credentials to get user tokens
-    const { data: credentials, error: credError } = await supabaseAdmin
-      .from('meter_credentials')
-      .select('*');
-
-    if (credError) {
-      console.error('[Analytics] Error fetching credentials:', credError);
-    }
-
-    // Filter by project IDs if specified
-    let linkedMeters = credentials || [];
-    if (projectIdFilter && projectIdFilter.size > 0) {
-      linkedMeters = linkedMeters.filter((cred: any) => 
-        projectIdFilter.has(cred.project_id)
+    // Step 1: Fetch all projects
+    const projectsResponse = await iotClient.getProjectList('', 100, 1, adminToken);
+    if (projectsResponse.success !== '1') {
+      console.error('[Analytics] Failed to fetch projects:', projectsResponse.errorMsg);
+      return NextResponse.json(
+        { error: 'Failed to fetch projects' },
+        { status: 500 }
       );
     }
-    console.log(`[Analytics] Processing ${linkedMeters.length} linked meters`);
+
+    let projects = projectsResponse.data?.list || [];
+    if (projectIdFilter && projectIdFilter.size > 0) {
+      projects = projects.filter((p: any) => projectIdFilter.has(String(p.id)));
+    }
+
+    console.log(`[Analytics] Processing ${projects.length} projects`);
+
+    // Step 2: Fetch all rooms for all projects in parallel
+    const projectRoomPromises = projects.map(async (project: any) => {
+      const projectId = String(project.id);
+      const projectName = project.projectName || 'Unknown';
+      try {
+        const roomResponse = await iotClient.getProjectRoomInfo(projectId, adminToken);
+        if (roomResponse.success === '1' || roomResponse.code === 200 || roomResponse.code === 0) {
+          return { projectId, projectName, rooms: roomResponse.data || [] };
+        }
+      } catch (e) {}
+      return { projectId, projectName, rooms: [] };
+    });
+
+    const projectRooms = await Promise.all(projectRoomPromises);
+    
+    // Step 3: Process all meters in parallel (batch of 5 to avoid overwhelming the API)
+    const allMeterPromises: Promise<any>[] = [];
+    for (const { projectId, projectName, rooms } of projectRooms) {
+      for (const room of rooms) {
+        allMeterPromises.push(
+          processMeter(room, projectId, projectName, userToken, adminToken, startDate, endDate)
+        );
+      }
+    }
+
+    // Process in batches of 5 for better performance
+    const BATCH_SIZE = 5;
+    const meterResults: any[] = [];
+    for (let i = 0; i < allMeterPromises.length; i += BATCH_SIZE) {
+      const batch = allMeterPromises.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(batch);
+      meterResults.push(...batchResults.filter(r => r !== null));
+    }
 
     // Initialize analytics data
     const analytics: AnalyticsData = {
       totalRevenue: 0,
       totalEnergy: 0,
       livePower: 0,
-      activeMeters: 0,
-      totalMeters: 0,
+      meterStatus: { normal: 0, offline: 0, alarm: 0, total: 0 },
       revenueByDay: [],
       revenueByProject: [],
       energyByDay: [],
       energyByMeter: [],
+      powerHistory: [],
       topConsumers: [],
       topRevenue: [],
       lowBalanceMeters: [],
       forcedModeMeters: [],
       offlineMeters: [],
       livePowerByMeter: [],
-      powerHistory: [],
     };
 
-    // Maps for aggregation
+    // Aggregation maps
     const revenueByDayMap = new Map<string, number>();
     const revenueByProjectMap = new Map<string, { projectName: string; revenue: number }>();
     const energyByDayMap = new Map<string, number>();
     const energyByMeterMap = new Map<string, { roomNo: string; energy: number; projectName: string }>();
     const revenueByMeterMap = new Map<string, { roomNo: string; revenue: number; projectName: string }>();
 
-    // Process each linked meter
-    for (const cred of linkedMeters) {
-      try {
-        const userToken = cred.iot_token;
-        const meterData = cred.meter_data;
-        const roomNo = cred.room_no;
-        const projectName = cred.project_name || 'Unknown';
+    // Process all meter results
+    for (const meter of meterResults) {
+      analytics.meterStatus.total++;
 
-        if (!userToken) continue;
+      if (meter.status === 'offline') {
+        analytics.meterStatus.offline++;
+        analytics.offlineMeters.push({ roomNo: meter.roomNo, meterId: meter.meterId });
+        continue;
+      }
 
-        analytics.totalMeters++;
+      if (meter.status === 'alarm') {
+        analytics.meterStatus.alarm++;
+        analytics.lowBalanceMeters.push({
+          roomNo: meter.roomNo,
+          balance: meter.balance,
+          meterId: meter.meterId,
+          alarmThreshold: meter.alarmA,
+        });
+      } else {
+        analytics.meterStatus.normal++;
+      }
 
-        // Use cached meter data if available
-        if (meterData) {
-          const balance = parseFloat(meterData.balance || '0');
-          const power = parseFloat(meterData.p || '0');
-          const isOnline = meterData.unConnnect === 0;
-          const controlMode = meterData.controlMode;
+      // Track live power
+      if (meter.isOnline && meter.power > 0) {
+        analytics.livePower += meter.power;
+        analytics.livePowerByMeter.push({
+          roomNo: meter.roomNo,
+          meterId: meter.meterId,
+          power: meter.power,
+          projectName: meter.projectName,
+        });
+      }
 
-          if (isOnline) {
-            analytics.activeMeters++;
-            analytics.livePower += power;
-            
-            analytics.livePowerByMeter.push({
-              roomNo,
-              meterId: meterData.meterId || cred.room_no,
-              power,
-              projectName,
-            });
-          } else {
-            analytics.offlineMeters.push({
-              roomNo,
-              meterId: meterData.meterId || cred.room_no,
-            });
-          }
+      // Check for forced mode
+      if (meter.controlMode === '1' || meter.controlMode === '2') {
+        analytics.forcedModeMeters.push({
+          roomNo: meter.roomNo,
+          controlMode: meter.switchSta === '1' ? 'forced_on' : 'forced_off',
+          meterId: meter.meterId,
+        });
+      }
 
-          // Check for low balance (< ₦500)
-          if (balance < 500) {
-            analytics.lowBalanceMeters.push({
-              roomNo,
-              balance,
-              meterId: meterData.meterId || cred.room_no,
-            });
-          }
-
-          // Check for forced mode (controlMode '1' or '2' means not in prepaid mode)
-          if (controlMode === '1' || controlMode === '2') {
-            const switchSta = meterData.switchSta;
-            // Determine actual forced state: switchSta '1' = ON, '0' = OFF
-            const forcedState = switchSta === '1' ? 'forced_on' : 'forced_off';
-            analytics.forcedModeMeters.push({
-              roomNo,
-              controlMode: forcedState,
-              meterId: meterData.meterId || cred.room_no,
-            });
-          }
-        }
-
-        // Fetch sales data for this user
-        try {
-          const salesResponse = await iotClient.getUserSaleList(
-            startDate,
-            endDate,
-            userToken
-          );
-
-          if (salesResponse.success === '1' && salesResponse.data) {
-            for (const sale of salesResponse.data) {
-              const amount = parseFloat(sale.saleMoney || '0');
-              if (amount > 0 && sale.success === 1) {
-                analytics.totalRevenue += amount;
-
-                // Aggregate by day
-                const saleDate = sale.createTime.split(' ')[0];
-                revenueByDayMap.set(saleDate, (revenueByDayMap.get(saleDate) || 0) + amount);
-
-                // Aggregate by project
-                const projKey = cred.project_id || 'unknown';
-                const existing = revenueByProjectMap.get(projKey) || { projectName, revenue: 0 };
-                existing.revenue += amount;
-                revenueByProjectMap.set(projKey, existing);
-
-                // Aggregate by meter
-                const meterKey = sale.roomNo;
-                const meterExisting = revenueByMeterMap.get(meterKey) || { roomNo: sale.roomNo, revenue: 0, projectName };
-                meterExisting.revenue += amount;
-                revenueByMeterMap.set(meterKey, meterExisting);
-              }
+      // Process sales data
+      if (meter.sales && (meter.sales as any).success === '1' && meter.sales.data) {
+        for (const sale of meter.sales.data) {
+          const amount = parseFloat(sale.saleMoney || sale.money || '0');
+          if (amount > 0) {
+            analytics.totalRevenue += amount;
+            const saleDate = (sale.createTime || sale.saleDate || '').split(' ')[0];
+            if (saleDate) {
+              revenueByDayMap.set(saleDate, (revenueByDayMap.get(saleDate) || 0) + amount);
             }
-          }
-        } catch (e) {
-          console.error(`[Analytics] Error fetching sales for ${roomNo}:`, e);
-        }
-
-        // Fetch energy data for this meter
-        if (meterData?.meterId) {
-          try {
-            const energyResponse = await iotClient.getMeterEnergyDay(
-              meterData.meterId,
-              `${startDate} 00:00:00`,
-              `${endDate} 23:59:59`,
-              userToken
-            );
-
-            if (energyResponse.success === '1' && energyResponse.data) {
-              let meterTotalEnergy = 0;
-              
-              for (const record of energyResponse.data) {
-                const energy = parseFloat(record.powerUse || '0');
-                meterTotalEnergy += energy;
-
-                // Aggregate by day
-                const energyDate = record.createTime.split(' ')[0];
-                energyByDayMap.set(energyDate, (energyByDayMap.get(energyDate) || 0) + energy);
-              }
-
-              analytics.totalEnergy += meterTotalEnergy;
-              energyByMeterMap.set(meterData.meterId, {
-                roomNo,
-                energy: meterTotalEnergy,
-                projectName,
-              });
-            }
-          } catch (e) {
-            console.error(`[Analytics] Error fetching energy for ${roomNo}:`, e);
+            const existing = revenueByProjectMap.get(meter.projectId) || { projectName: meter.projectName, revenue: 0 };
+            existing.revenue += amount;
+            revenueByProjectMap.set(meter.projectId, existing);
+            const meterExisting = revenueByMeterMap.get(meter.meterId) || { roomNo: meter.roomNo, revenue: 0, projectName: meter.projectName };
+            meterExisting.revenue += amount;
+            revenueByMeterMap.set(meter.meterId, meterExisting);
           }
         }
-      } catch (e) {
-        console.error(`[Analytics] Error processing meter ${cred.room_no}:`, e);
+      }
+
+      // Process energy data
+      if (meter.energy && meter.energy.success === '1' && meter.energy.data) {
+        let meterTotalEnergy = 0;
+        for (const record of meter.energy.data) {
+          const energy = parseFloat(record.powerUse || '0');
+          meterTotalEnergy += energy;
+          const energyDate = record.createTime.split(' ')[0];
+          energyByDayMap.set(energyDate, (energyByDayMap.get(energyDate) || 0) + energy);
+        }
+        if (meterTotalEnergy > 0) {
+          analytics.totalEnergy += meterTotalEnergy;
+          energyByMeterMap.set(meter.meterId, {
+            roomNo: meter.roomNo,
+            energy: meterTotalEnergy,
+            projectName: meter.projectName,
+          });
+        }
       }
     }
 
@@ -261,7 +327,8 @@ export async function GET(request: NextRequest) {
     analytics.topConsumers = analytics.energyByMeter.slice(0, 10);
 
     // Top revenue generators
-    analytics.topRevenue = Array.from(revenueByMeterMap.values())
+    analytics.topRevenue = Array.from(revenueByMeterMap.entries())
+      .map(([meterId, data]) => ({ meterId, ...data }))
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
@@ -292,10 +359,9 @@ export async function GET(request: NextRequest) {
       console.error('[Analytics] Error fetching power history:', e);
     }
 
-    // Record current power reading (if we have live power data)
-    if (analytics.livePower > 0 || analytics.activeMeters > 0) {
+    // Record current power reading
+    if (analytics.livePower > 0 || analytics.meterStatus.normal > 0) {
       try {
-        // Build readings by project
         const projectPowerMap: Record<string, { projectName: string; power: number; meterCount: number }> = {};
         for (const meter of analytics.livePowerByMeter) {
           const key = meter.projectName;
@@ -309,20 +375,26 @@ export async function GET(request: NextRequest) {
         await supabaseAdmin
           .from('power_readings')
           .insert({
+            recorded_at: new Date().toISOString(),
             total_power: analytics.livePower,
-            active_meters: analytics.activeMeters,
+            active_meters: analytics.meterStatus.normal,
             readings_by_project: projectPowerMap,
-            readings_by_meter: analytics.livePowerByMeter.slice(0, 20), // Limit to top 20
+            readings_by_meter: analytics.livePowerByMeter.slice(0, 20),
           });
       } catch (e) {
         console.error('[Analytics] Error recording power reading:', e);
       }
     }
 
+    const loadTime = Date.now() - startTime;
+    console.log(`[Analytics] Complete in ${loadTime}ms - Revenue: ${analytics.totalRevenue}, Energy: ${analytics.totalEnergy}, Power: ${analytics.livePower}`);
+    console.log(`[Analytics] Meter Status - Normal: ${analytics.meterStatus.normal}, Offline: ${analytics.meterStatus.offline}, Alarm: ${analytics.meterStatus.alarm}`);
+
     return NextResponse.json({
       success: true,
       data: analytics,
       period: { startDate, endDate },
+      loadTimeMs: loadTime,
     });
   } catch (error: any) {
     console.error('[Analytics] Error:', error);
@@ -333,10 +405,9 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Helper functions
 function getDefaultStartDate(): string {
   const date = new Date();
-  date.setDate(1); // First of current month
+  date.setDate(1);
   return date.toISOString().split('T')[0];
 }
 

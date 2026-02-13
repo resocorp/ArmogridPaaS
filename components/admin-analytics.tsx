@@ -43,20 +43,26 @@ import {
 } from 'recharts';
 import { format, subDays, subHours, subMonths, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 
+interface MeterStatus {
+  normal: number;
+  offline: number;
+  alarm: number;
+  total: number;
+}
+
 interface AnalyticsData {
   totalRevenue: number;
   totalEnergy: number;
   livePower: number;
-  activeMeters: number;
-  totalMeters: number;
+  meterStatus: MeterStatus;
   revenueByDay: { date: string; revenue: number }[];
   revenueByProject: { projectId: string; projectName: string; revenue: number }[];
   energyByDay: { date: string; energy: number }[];
   energyByMeter: { meterId: string; roomNo: string; energy: number; projectName: string }[];
   powerHistory: { timestamp: string; power: number; activeMeters: number }[];
   topConsumers: { roomNo: string; meterId: string; energy: number; projectName: string }[];
-  topRevenue: { roomNo: string; revenue: number; projectName: string }[];
-  lowBalanceMeters: { roomNo: string; balance: number; meterId: string }[];
+  topRevenue: { roomNo: string; revenue: number; projectName: string; meterId: string }[];
+  lowBalanceMeters: { roomNo: string; balance: number; meterId: string; alarmThreshold: number }[];
   forcedModeMeters: { roomNo: string; controlMode: string; meterId: string }[];
   offlineMeters: { roomNo: string; meterId: string }[];
   livePowerByMeter: { roomNo: string; meterId: string; power: number; projectName: string }[];
@@ -490,13 +496,24 @@ export function AdminAnalytics() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-600">Active Meters</p>
+                <p className="text-sm font-medium text-purple-600">Meter Status</p>
                 <p className="text-2xl font-bold text-purple-700">
-                  {analytics.activeMeters} / {analytics.totalMeters}
+                  {analytics.meterStatus.total} Total
                 </p>
-                <p className="text-xs text-purple-600 mt-1">
-                  Online and responding
-                </p>
+                <div className="flex gap-3 mt-2 text-xs">
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span className="text-emerald-700">{analytics.meterStatus.normal} Normal</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-gray-400"></span>
+                    <span className="text-gray-600">{analytics.meterStatus.offline} Offline</span>
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
+                    <span className="text-cyan-700">{analytics.meterStatus.alarm} Alarm</span>
+                  </span>
+                </div>
               </div>
               <div className="p-3 bg-purple-200 rounded-full">
                 <Users className="w-6 h-6 text-purple-700" />
@@ -505,6 +522,93 @@ export function AdminAnalytics() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Meter Status Donut Chart */}
+      {analytics.meterStatus.total > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Users className="w-5 h-5 text-purple-500" />
+              Device Status
+            </CardTitle>
+            <CardDescription>Real-time meter status breakdown</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ResponsiveContainer width="100%" height={200}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Normal', value: analytics.meterStatus.normal, color: '#10b981' },
+                      { name: 'Offline', value: analytics.meterStatus.offline, color: '#6b7280' },
+                      { name: 'Alarm', value: analytics.meterStatus.alarm, color: '#06b6d4' },
+                    ].filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={2}
+                    dataKey="value"
+                  >
+                    {[
+                      { name: 'Normal', value: analytics.meterStatus.normal, color: '#10b981' },
+                      { name: 'Offline', value: analytics.meterStatus.offline, color: '#6b7280' },
+                      { name: 'Alarm', value: analytics.meterStatus.alarm, color: '#06b6d4' },
+                    ].filter(d => d.value > 0).map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(value: number) => [value, 'Meters']} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex flex-col justify-center space-y-4">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-emerald-500" />
+                    <span className="font-medium">Normal (PCS)</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-emerald-700">{analytics.meterStatus.normal}</span>
+                    <span className="text-sm text-emerald-600 ml-2">
+                      {analytics.meterStatus.total > 0 
+                        ? ((analytics.meterStatus.normal / analytics.meterStatus.total) * 100).toFixed(1) 
+                        : 0}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-gray-400" />
+                    <span className="font-medium">Offline (PCS)</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-gray-700">{analytics.meterStatus.offline}</span>
+                    <span className="text-sm text-gray-600 ml-2">
+                      {analytics.meterStatus.total > 0 
+                        ? ((analytics.meterStatus.offline / analytics.meterStatus.total) * 100).toFixed(1) 
+                        : 0}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between p-3 rounded-lg bg-cyan-50">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 rounded-full bg-cyan-500" />
+                    <span className="font-medium">Alarm (PCS)</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="font-bold text-cyan-700">{analytics.meterStatus.alarm}</span>
+                    <span className="text-sm text-cyan-600 ml-2">
+                      {analytics.meterStatus.total > 0 
+                        ? ((analytics.meterStatus.alarm / analytics.meterStatus.total) * 100).toFixed(1) 
+                        : 0}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

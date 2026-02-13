@@ -141,6 +141,58 @@ export async function requireAdmin(): Promise<Session> {
   return session;
 }
 
+// Cache for user token to avoid repeated logins
+let cachedUserToken: { token: string; expiry: number } | null = null;
+
+/**
+ * Get user token for APIs that require user authentication (getMeterInfo, etc.)
+ */
+export async function getUserToken(): Promise<string> {
+  console.log('[Auth] Getting user token...');
+  
+  // Check if we have a cached token that's still valid (with 5 min buffer)
+  if (cachedUserToken && cachedUserToken.expiry > Date.now() + 300000) {
+    console.log('[Auth] Using cached user token');
+    return cachedUserToken.token;
+  }
+
+  // Login using user credentials from environment
+  const { iotClient } = await import('./iot-client');
+  const username = process.env.IOT_USER_USERNAME;
+  const password = process.env.IOT_USER_PASSWORD;
+
+  if (!username || !password) {
+    console.error('[Auth] User credentials not configured in environment');
+    throw new Error('User credentials not configured (IOT_USER_USERNAME, IOT_USER_PASSWORD)');
+  }
+
+  console.log(`[Auth] Logging in as user: ${username}`);
+  const response = await iotClient.login(username, password, 1); // userType 1 = regular user
+  console.log(`[Auth] User login response:`, JSON.stringify(response));
+
+  if (response.success === '1' && response.data) {
+    console.log('[Auth] Successfully obtained user token');
+    // Cache token for 1 hour
+    cachedUserToken = {
+      token: response.data,
+      expiry: Date.now() + 3600000,
+    };
+    return response.data;
+  }
+
+  if ((response.code === 200 || response.code === 0) && response.data) {
+    console.log('[Auth] Successfully obtained user token (legacy format)');
+    cachedUserToken = {
+      token: response.data,
+      expiry: Date.now() + 3600000,
+    };
+    return response.data;
+  }
+
+  console.error('[Auth] Failed to get user token:', response);
+  throw new Error(`Failed to get user token: ${response.errorMsg || response.msg || 'Unknown error'}`);
+}
+
 /**
  * Get admin token from environment or session
  */
