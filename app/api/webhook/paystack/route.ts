@@ -6,6 +6,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { generateSaleId, translateErrorMessage } from '@/lib/utils';
 import { BUY_TYPE } from '@/lib/constants';
 import { notifyAdminOfRegistration } from '@/lib/notifications';
+import { sendWelcomeSms, sendPaymentSuccessSms, sendPaymentFailedSms } from '@/lib/sms';
 import type { PaystackWebhookEvent } from '@/types/payment';
 
 export async function POST(request: NextRequest) {
@@ -143,6 +144,23 @@ export async function POST(request: NextRequest) {
             .eq('reference', reference);
 
           console.log(`[Webhook] Successfully credited meter ${meterId} with ₦${transaction.amount_kobo / 100}`);
+
+          // Send SMS notification for successful payment
+          if (transaction.customer_phone) {
+            try {
+              await sendPaymentSuccessSms({
+                name: transaction.metadata?.customerName || 'Customer',
+                phone: transaction.customer_phone,
+                amount: transaction.amount_kobo / 100,
+                meterId: meterId,
+                reference: reference,
+                balance: (saleResponse as any).balance || (saleResponse as any).data?.balance,
+              });
+              console.log('[Webhook] Payment success SMS sent');
+            } catch (smsError) {
+              console.error('[Webhook] Failed to send payment SMS:', smsError);
+            }
+          }
         } else {
           const rawErrorMsg = saleResponse.errorMsg || saleResponse.msg || 'Failed to credit meter';
           const errorMsg = translateErrorMessage(rawErrorMsg);
@@ -262,6 +280,28 @@ async function processRegistrationPayment(
       .eq('id', registration.id);
 
     console.log('[Webhook] Registration processed successfully');
+
+    // Send welcome SMS to customer with meterId
+    try {
+      // Get meterId from meter_credentials
+      const { data: meterCred } = await supabaseAdmin
+        .from('meter_credentials')
+        .select('meter_data')
+        .eq('room_no', registration.room_number)
+        .single();
+      
+      const meterId = (meterCred?.meter_data as any)?.meterId || '';
+      
+      await sendWelcomeSms({
+        name: registration.name,
+        phone: registration.phone,
+        meterId: meterId,
+        locationName: registration.location_name || 'Your Location',
+      });
+      console.log('[Webhook] Welcome SMS sent to customer');
+    } catch (smsError) {
+      console.error('[Webhook] Failed to send welcome SMS:', smsError);
+    }
   } else {
     console.log('[Webhook] Registration payment failed');
     await supabaseAdmin

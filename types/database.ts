@@ -101,6 +101,41 @@ export interface CustomerRegistration {
   updated_at: string;
 }
 
+export interface SmsLog {
+  id: string;
+  phone_number: string;
+  message: string;
+  notification_type: string;
+  status: 'pending' | 'sent' | 'failed';
+  error: string | null;
+  response: string | null;
+  created_at: string;
+}
+
+export interface NotificationTemplate {
+  id: string;
+  name: string;
+  type: 'sms' | 'whatsapp' | 'email';
+  notification_type: string;
+  template: string;
+  enabled: boolean;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerNotificationPreference {
+  id: string;
+  customer_id: string | null;
+  phone_number: string | null;
+  sms_enabled: boolean;
+  whatsapp_enabled: boolean;
+  email_enabled: boolean;
+  low_credit_threshold: number;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {

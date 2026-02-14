@@ -64,12 +64,14 @@ import {
   Mail,
   Phone,
   MapPin,
-  Save
+  Save,
+  Bell
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { AdminAnalytics } from '@/components/admin-analytics';
+import { AdminSmsSettings } from '@/components/admin-sms-settings';
 
 interface Stats {
   totalProjects: number;
@@ -769,7 +771,7 @@ export default function AdminPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-6">
+          <TabsList className="grid w-full max-w-4xl grid-cols-7">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -789,6 +791,10 @@ export default function AdminPage() {
             <TabsTrigger value="registrations" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Registrations
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="w-4 h-4" />
+              SMS
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
@@ -1658,6 +1664,11 @@ export default function AdminPage() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-4">
+            <AdminSmsSettings />
           </TabsContent>
 
         </Tabs>
