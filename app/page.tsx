@@ -32,7 +32,7 @@ export default function HomePage() {
   }>({ isValidating: false, found: null, roomNo: null });
 
   // Sign-up form state
-  const [activeTab, setActiveTab] = useState('signup');
+  const [activeTab, setActiveTab] = useState('recharge');
   const [signupName, setSignupName] = useState('');
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
