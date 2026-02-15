@@ -12,6 +12,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import { isValidMeterId, formatNaira } from '@/lib/utils';
 import { MIN_RECHARGE_AMOUNT, MAX_RECHARGE_AMOUNT, PAYSTACK_FEE } from '@/lib/constants';
+import type { PaymentGateway } from '@/types/ivorypay';
+import { IVORYPAY_FEE } from '@/lib/ivorypay';
 
 interface Location {
   id: string;
@@ -42,6 +44,23 @@ export default function HomePage() {
   const [locationsLoading, setLocationsLoading] = useState(false);
   const [signupAmount, setSignupAmount] = useState<number | null>(null);
   const [isSignupLoading, setIsSignupLoading] = useState(false);
+  const [activePaymentGateway, setActivePaymentGateway] = useState<PaymentGateway>('paystack');
+
+  // Fetch payment gateway config on mount
+  useEffect(() => {
+    const fetchPaymentConfig = async () => {
+      try {
+        const response = await fetch('/api/payment/config');
+        const data = await response.json();
+        if (data.success) {
+          setActivePaymentGateway(data.data.activeGateway || 'paystack');
+        }
+      } catch (error) {
+        console.error('Failed to fetch payment config:', error);
+      }
+    };
+    fetchPaymentConfig();
+  }, []);
 
   // Fetch locations when sign-up tab is active
   useEffect(() => {
@@ -83,14 +102,25 @@ export default function HomePage() {
     }
   };
 
-  // Calculate Paystack fee in real-time
+  // Calculate fee in real-time based on active payment gateway
   const feeCalculation = useMemo(() => {
     const amountNum = parseFloat(amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       return null;
     }
 
-    // Local card fee: 1.5% + ₦100 (capped at ₦2,000)
+    if (activePaymentGateway === 'ivorypay') {
+      // IvoryPay fee: approximately 1%
+      const fee = Math.ceil(amountNum * IVORYPAY_FEE.PERCENTAGE);
+      return {
+        rechargeAmount: amountNum,
+        fee,
+        totalAmount: amountNum + fee,
+        feeDescription: '1% IvoryPay fee',
+      };
+    }
+
+    // Paystack fees: 1.5% + ₦100 (capped at ₦2,000)
     // ₦100 fee is waived for transactions under ₦2,500
     const percentageFee = Math.ceil(amountNum * PAYSTACK_FEE.LOCAL_PERCENTAGE);
     const flatFee = amountNum >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
@@ -113,7 +143,7 @@ export default function HomePage() {
       totalAmount,
       feeDescription,
     };
-  }, [amount]);
+  }, [amount, activePaymentGateway]);
 
   const validateMeter = async (meterIdToValidate: string) => {
     if (!meterIdToValidate || !isValidMeterId(meterIdToValidate)) {
@@ -177,24 +207,48 @@ export default function HomePage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/payment/initialize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          meterId,
-          amount: amountNum,
-          email,
-        }),
-      });
+      if (activePaymentGateway === 'ivorypay') {
+        // IvoryPay payment flow
+        const response = await fetch('/api/payment/ivorypay/initialize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            meterId,
+            amount: amountNum,
+            email,
+          }),
+        });
 
-      const data = await response.json();
+        const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to initialize payment');
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to initialize payment');
+        }
+
+        // Redirect to IvoryPay payment page
+        toast.info('Redirecting to IvoryPay...');
+        window.location.href = data.data.payment_url;
+      } else {
+        // Paystack payment flow
+        const response = await fetch('/api/payment/initialize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            meterId,
+            amount: amountNum,
+            email,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to initialize payment');
+        }
+
+        // Redirect to Paystack payment page
+        window.location.href = data.data.authorization_url;
       }
-
-      // Redirect to Paystack payment page
-      window.location.href = data.data.authorization_url;
     } catch (error: any) {
       toast.error(error.message || 'Failed to initialize payment');
       setIsLoading(false);
@@ -244,6 +298,7 @@ export default function HomePage() {
           roomNumber: signupRoom.trim(),
           locationId: signupLocation,
           locationName: selectedLocation?.name,
+          paymentGateway: activePaymentGateway,
         }),
       });
 
@@ -253,9 +308,13 @@ export default function HomePage() {
         throw new Error(data.error || 'Failed to process registration');
       }
 
-      // Redirect to Paystack payment page
+      // Redirect to appropriate payment page
       toast.success('Redirecting to payment...');
-      window.location.href = data.data.authorization_url;
+      if (activePaymentGateway === 'ivorypay' && data.data.payment_url) {
+        window.location.href = data.data.payment_url;
+      } else {
+        window.location.href = data.data.authorization_url;
+      }
     } catch (error: any) {
       toast.error(error.message || 'Failed to process registration');
       setIsSignupLoading(false);
@@ -274,6 +333,20 @@ export default function HomePage() {
     if (!signupAmount || roomCount === 0) return null;
     
     const baseAmount = signupAmount * roomCount;
+    
+    if (activePaymentGateway === 'ivorypay') {
+      // IvoryPay fee: approximately 1%
+      const fee = Math.ceil(baseAmount * IVORYPAY_FEE.PERCENTAGE);
+      return {
+        amount: baseAmount,
+        unitAmount: signupAmount,
+        roomCount,
+        fee,
+        total: baseAmount + fee,
+      };
+    }
+    
+    // Paystack fees
     const percentageFee = Math.ceil(baseAmount * PAYSTACK_FEE.LOCAL_PERCENTAGE);
     const flatFee = baseAmount >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
     let fee = percentageFee + flatFee;
@@ -286,7 +359,7 @@ export default function HomePage() {
       fee,
       total: baseAmount + fee,
     };
-  }, [signupAmount, roomCount]);
+  }, [signupAmount, roomCount, activePaymentGateway]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-armogrid-navy via-armogrid-blue to-armogrid-navy">

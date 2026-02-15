@@ -42,75 +42,51 @@ interface MeterInfo {
   switchSta: string;
 }
 
-// Helper to process a single meter with all its data in parallel
-async function processMeter(
-  room: any,
-  projectId: string,
-  projectName: string,
-  userToken: string,
+// Helper to process meter data from appProjectMeterList response
+function processMeterFromList(
+  meter: any,
   adminToken: string,
   startDate: string,
   endDate: string
-) {
-  const roomNo: string = room.name || room.roomNo || '';
-  if (!roomNo) return null;
+): { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any> } {
+  const meterId = String(meter.id || '');
+  const roomNo = meter.roomNo || meter.meterName || meter.meterSn || '';
+  const projectId = String(meter.projectId || '');
+  const projectName = meter.projectName || 'Unknown';
+  
+  // Extract meter data directly from appProjectMeterList response
+  const balance = parseFloat(meter.balance || '0');
+  const alarmA = parseFloat(meter.alarmA || '100');
+  // unConnect: 0 = online, 1 = offline (note: single 'n' in API response)
+  const isOnline = meter.unConnect === 0 || meter.unConnect === '0';
+  const isAlarm = balance > 0 && alarmA > 0 && balance < alarmA;
+  
+  const meterInfo = {
+    roomNo,
+    meterId,
+    meterSn: meter.meterSn || '',
+    projectId,
+    projectName,
+    balance,
+    power: 0, // Will be updated from energy data if available
+    alarmA,
+    isOnline,
+    isAlarm,
+    controlMode: meter.prepaidType,
+    switchSta: meter.switchSta,
+    status: !isOnline ? 'offline' as const : isAlarm ? 'alarm' as const : 'normal' as const,
+    EPI: parseFloat(meter.EPI || '0'),
+  };
 
-  try {
-    // Fetch meter info first (required to get meterId)
-    const meterInfoResponse = await iotClient.getMeterInfo(roomNo, userToken);
-    const meterSuccess = meterInfoResponse.success === '1' || 
-                        meterInfoResponse.code === 200 || 
-                        meterInfoResponse.code === 0;
+  // Create promises for sales and energy data
+  const salesPromise = meterId 
+    ? iotClient.getSaleInfoByMeterId(meterId, startDate, endDate, adminToken).catch(() => null)
+    : Promise.resolve(null);
+  const energyPromise = meterId
+    ? iotClient.getMeterEnergyDay(meterId, `${startDate} 00:00:00`, `${endDate} 23:59:59`, adminToken).catch(() => null)
+    : Promise.resolve(null);
 
-    if (!meterSuccess || !meterInfoResponse.data) {
-      return {
-        roomNo,
-        meterId: String(room.meterId || ''),
-        status: 'offline' as const,
-        projectId,
-        projectName,
-      };
-    }
-
-    const meterData = meterInfoResponse.data;
-    const meterId = String(meterData.meterId);
-    const balance = parseFloat(meterData.balance || '0');
-    const power = parseFloat(meterData.p || '0');
-    const alarmA = parseFloat(meterData.alarmA || '100');
-    const isOnline = meterData.unConnnect === 0;
-    const isAlarm = balance < alarmA;
-
-    // Fetch sales and energy data in parallel
-    const [salesResult, energyResult] = await Promise.all([
-      iotClient.getSaleInfoByMeterId(meterId, startDate, endDate, adminToken).catch(() => null),
-      iotClient.getMeterEnergyDay(meterId, `${startDate} 00:00:00`, `${endDate} 23:59:59`, adminToken).catch(() => null),
-    ]);
-
-    return {
-      roomNo,
-      meterId,
-      projectId,
-      projectName,
-      balance,
-      power,
-      alarmA,
-      isOnline,
-      isAlarm,
-      controlMode: meterData.controlMode,
-      switchSta: meterData.switchSta,
-      status: !isOnline ? 'offline' as const : isAlarm ? 'alarm' as const : 'normal' as const,
-      sales: salesResult,
-      energy: energyResult,
-    };
-  } catch (e) {
-    return {
-      roomNo,
-      meterId: String(room.meterId || ''),
-      status: 'offline' as const,
-      projectId,
-      projectName,
-    };
-  }
+  return { meterInfo, salesPromise, energyPromise };
 }
 
 // GET - Fetch analytics data with live IoT data (OPTIMIZED with parallel processing)
@@ -164,39 +140,70 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Analytics] Processing ${projects.length} projects`);
 
-    // Step 2: Fetch all rooms for all projects in parallel
-    const projectRoomPromises = projects.map(async (project: any) => {
+    // Step 2: Fetch all meters for all projects using appProjectMeterList (more reliable)
+    const projectMeterPromises = projects.map(async (project: any) => {
       const projectId = String(project.id);
       const projectName = project.projectName || 'Unknown';
       try {
-        const roomResponse = await iotClient.getProjectRoomInfo(projectId, adminToken);
-        if (roomResponse.success === '1' || roomResponse.code === 200 || roomResponse.code === 0) {
-          return { projectId, projectName, rooms: roomResponse.data || [] };
+        const meterListResponse = await iotClient.getProjectMeterList(projectId, userToken);
+        if (meterListResponse.success === '1' && meterListResponse.data?.list) {
+          return { projectId, projectName, meters: meterListResponse.data.list };
         }
-      } catch (e) {}
-      return { projectId, projectName, rooms: [] };
+      } catch (e) {
+        console.error(`[Analytics] Failed to get meter list for project ${projectId}:`, e);
+      }
+      return { projectId, projectName, meters: [] };
     });
 
-    const projectRooms = await Promise.all(projectRoomPromises);
+    const projectMeters = await Promise.all(projectMeterPromises);
     
-    // Step 3: Process all meters in parallel (batch of 5 to avoid overwhelming the API)
-    const allMeterPromises: Promise<any>[] = [];
-    for (const { projectId, projectName, rooms } of projectRooms) {
-      for (const room of rooms) {
-        allMeterPromises.push(
-          processMeter(room, projectId, projectName, userToken, adminToken, startDate, endDate)
-        );
+    // Log meter counts per project for debugging
+    let totalMeterCount = 0;
+    for (const { projectId, projectName, meters } of projectMeters) {
+      console.log(`[Analytics] Project "${projectName}" (${projectId}): ${meters.length} meters`);
+      totalMeterCount += meters.length;
+    }
+    console.log(`[Analytics] Total meters to process: ${totalMeterCount}`);
+    
+    // Step 3: Process all meters - extract info and create sales/energy promises
+    const meterResults: any[] = [];
+    const salesEnergyPromises: { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any> }[] = [];
+    
+    for (const { meters } of projectMeters) {
+      for (const meter of meters) {
+        const processed = processMeterFromList(meter, adminToken, startDate, endDate);
+        salesEnergyPromises.push(processed);
+        meterResults.push(processed.meterInfo);
       }
     }
 
-    // Process in batches of 5 for better performance
-    const BATCH_SIZE = 5;
-    const meterResults: any[] = [];
-    for (let i = 0; i < allMeterPromises.length; i += BATCH_SIZE) {
-      const batch = allMeterPromises.slice(i, i + BATCH_SIZE);
-      const batchResults = await Promise.all(batch);
-      meterResults.push(...batchResults.filter(r => r !== null));
+    // Fetch sales and energy data in parallel batches
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < salesEnergyPromises.length; i += BATCH_SIZE) {
+      const batch = salesEnergyPromises.slice(i, i + BATCH_SIZE);
+      const salesResults = await Promise.all(batch.map(b => b.salesPromise));
+      const energyResults = await Promise.all(batch.map(b => b.energyPromise));
+      
+      // Attach results to meter info
+      for (let j = 0; j < batch.length; j++) {
+        const meterIndex = i + j;
+        if (meterIndex < meterResults.length) {
+          meterResults[meterIndex].sales = salesResults[j];
+          meterResults[meterIndex].energy = energyResults[j];
+        }
+      }
     }
+
+    console.log(`[Analytics] Processed ${meterResults.length} meter results`);
+    
+    // Debug: Log status breakdown before aggregation
+    const statusBreakdown = { normal: 0, offline: 0, alarm: 0 };
+    for (const m of meterResults) {
+      if (m.status === 'offline') statusBreakdown.offline++;
+      else if (m.status === 'alarm') statusBreakdown.alarm++;
+      else if (m.status === 'normal') statusBreakdown.normal++;
+    }
+    console.log(`[Analytics] Pre-aggregation status: Normal=${statusBreakdown.normal}, Offline=${statusBreakdown.offline}, Alarm=${statusBreakdown.alarm}`);
 
     // Initialize analytics data
     const analytics: AnalyticsData = {

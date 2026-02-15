@@ -11,22 +11,28 @@ import { formatNaira } from '@/lib/utils';
 function PaymentSuccessContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get('reference');
+  const gateway = searchParams.get('gateway') || 'paystack';
   const [isVerifying, setIsVerifying] = useState(true);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (reference) {
-      verifyPayment(reference);
+      verifyPayment(reference, gateway);
     } else {
       setError('No payment reference found');
       setIsVerifying(false);
     }
-  }, [reference]);
+  }, [reference, gateway]);
 
-  const verifyPayment = async (ref: string) => {
+  const verifyPayment = async (ref: string, paymentGateway: string) => {
     try {
-      const response = await fetch(`/api/payment/verify/${ref}`);
+      // Use appropriate verification endpoint based on gateway
+      const verifyUrl = paymentGateway === 'ivorypay' 
+        ? `/api/payment/ivorypay/verify/${ref}`
+        : `/api/payment/verify/${ref}`;
+      
+      const response = await fetch(verifyUrl);
       const data = await response.json();
 
       if (!response.ok) {

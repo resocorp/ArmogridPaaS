@@ -281,19 +281,155 @@ class IotClient {
 
   /**
    * Get room information for a project
+   * Fetches all rooms by handling pagination if present
    */
   async getProjectRoomInfo(
     projectId: string,
-    token: string
+    token: string,
+    pageSize: number = 100,
+    pageIndex: number = 1
   ): Promise<IoT.GetProjectRoomInfoResponse> {
-    return this.request<IoT.GetProjectRoomInfoResponse>(
+    console.log(`[IoT Client] Getting rooms for project ${projectId}, page ${pageIndex}, pageSize ${pageSize}`);
+    
+    const response = await this.request<any>(
       '/basic/prepayment/app/ProjectRoomInfo',
       {
         method: 'POST',
         token,
-        body: JSON.stringify({ projectId }),
+        body: JSON.stringify({ projectId, pageSize, pageIndex }),
       }
     );
+
+    // Check if response has pagination and more pages to fetch
+    if (response.success === '1' && response.data) {
+      const rooms = Array.isArray(response.data) ? response.data : (response.data.list || []);
+      const pagination = response.data?.pagination;
+      
+      // If there's pagination and more pages, fetch all remaining pages
+      if (pagination && pagination.pageCount > pageIndex) {
+        console.log(`[IoT Client] Project ${projectId} has ${pagination.pageCount} pages, fetching more...`);
+        const allRooms = [...rooms];
+        
+        for (let page = pageIndex + 1; page <= pagination.pageCount; page++) {
+          const nextResponse = await this.request<any>(
+            '/basic/prepayment/app/ProjectRoomInfo',
+            {
+              method: 'POST',
+              token,
+              body: JSON.stringify({ projectId, pageSize, pageIndex: page }),
+            }
+          );
+          
+          if (nextResponse.success === '1' && nextResponse.data) {
+            const nextRooms = Array.isArray(nextResponse.data) ? nextResponse.data : (nextResponse.data.list || []);
+            allRooms.push(...nextRooms);
+          }
+        }
+        
+        console.log(`[IoT Client] Total rooms fetched for project ${projectId}: ${allRooms.length}`);
+        return {
+          success: '1',
+          errorCode: '',
+          errorMsg: '',
+          data: allRooms,
+        };
+      }
+      
+      console.log(`[IoT Client] Rooms returned for project ${projectId}: ${rooms.length}`);
+      return {
+        success: response.success,
+        errorCode: response.errorCode || '',
+        errorMsg: response.errorMsg || '',
+        data: rooms,
+      };
+    }
+
+    return response as IoT.GetProjectRoomInfoResponse;
+  }
+
+  /**
+   * Get all meters for a project with full details using appProjectMeterList
+   * This is the preferred method as it returns all meter data in one call
+   */
+  async getProjectMeterList(
+    projectId: string,
+    token: string,
+    energyId: string = '1',
+    pageSize: number = 100,
+    pageIndex: number = 1
+  ): Promise<{
+    success: string;
+    errorCode: string;
+    errorMsg: string;
+    data: {
+      pagination?: { current: number; pageSize: number; total: number; pageCount: number };
+      list: any[];
+    };
+  }> {
+    console.log(`[IoT Client] Getting meter list for project ${projectId}, page ${pageIndex}, pageSize ${pageSize}`);
+    
+    const response = await this.request<any>(
+      '/basic/prepayment/app/appProjectMeterList',
+      {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ 
+          keyword: '',
+          projectId, 
+          energyId,
+          pageSize, 
+          pageIndex 
+        }),
+      }
+    );
+
+    // Handle pagination - fetch all pages if there are multiple
+    if (response.success === '1' && response.data) {
+      const pagination = response.data.pagination;
+      let allMeters = response.data.list || [];
+      
+      // If there are more pages, fetch them all
+      if (pagination && pagination.pageCount > pageIndex) {
+        console.log(`[IoT Client] Project ${projectId} has ${pagination.pageCount} pages (${pagination.total} total meters), fetching all...`);
+        
+        for (let page = pageIndex + 1; page <= pagination.pageCount; page++) {
+          const nextResponse = await this.request<any>(
+            '/basic/prepayment/app/appProjectMeterList',
+            {
+              method: 'POST',
+              token,
+              body: JSON.stringify({ 
+                keyword: '',
+                projectId, 
+                energyId,
+                pageSize, 
+                pageIndex: page 
+              }),
+            }
+          );
+          
+          if (nextResponse.success === '1' && nextResponse.data?.list) {
+            allMeters = allMeters.concat(nextResponse.data.list);
+          }
+        }
+        
+        console.log(`[IoT Client] Total meters fetched for project ${projectId}: ${allMeters.length}`);
+      } else {
+        console.log(`[IoT Client] Meters returned for project ${projectId}: ${allMeters.length}`);
+      }
+      
+      return {
+        success: '1',
+        errorCode: '',
+        errorMsg: '',
+        data: {
+          pagination: pagination || { current: 1, pageSize, total: allMeters.length, pageCount: 1 },
+          list: allMeters,
+        },
+      };
+    }
+
+    return response;
   }
 }
 

@@ -22,6 +22,7 @@ export const BUY_TYPE = {
   CASH: 0,
   CARD: 1,
   PAYSTACK: 3,
+  IVORYPAY: 4,
 } as const;
 
 // Payment Status

@@ -72,6 +72,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { AdminAnalytics } from '@/components/admin-analytics';
 import { AdminSmsSettings } from '@/components/admin-sms-settings';
+import { AdminPaymentSettings } from '@/components/admin-payment-settings';
 
 interface Stats {
   totalProjects: number;
@@ -771,7 +772,7 @@ export default function AdminPage() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
-          <TabsList className="grid w-full max-w-4xl grid-cols-7">
+          <TabsList className="grid w-full max-w-5xl grid-cols-8">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -795,6 +796,10 @@ export default function AdminPage() {
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Bell className="w-4 h-4" />
               SMS
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              Payments
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
@@ -1669,6 +1674,11 @@ export default function AdminPage() {
           {/* Notifications Tab */}
           <TabsContent value="notifications" className="space-y-4">
             <AdminSmsSettings />
+          </TabsContent>
+
+          {/* Payments Tab */}
+          <TabsContent value="payments" className="space-y-4">
+            <AdminPaymentSettings />
           </TabsContent>
 
         </Tabs>
