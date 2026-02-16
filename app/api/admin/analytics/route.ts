@@ -45,10 +45,11 @@ interface MeterInfo {
 // Helper to process meter data from appProjectMeterList response
 function processMeterFromList(
   meter: any,
+  userToken: string,
   adminToken: string,
   startDate: string,
   endDate: string
-): { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any> } {
+): { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any>; powerPromise: Promise<any> } {
   const meterId = String(meter.id || '');
   const roomNo = meter.roomNo || meter.meterName || meter.meterSn || '';
   const projectId = String(meter.projectId || '');
@@ -68,7 +69,7 @@ function processMeterFromList(
     projectId,
     projectName,
     balance,
-    power: 0, // Will be updated from energy data if available
+    power: 0, // Will be updated from getMeterInfo for online meters
     alarmA,
     isOnline,
     isAlarm,
@@ -85,8 +86,13 @@ function processMeterFromList(
   const energyPromise = meterId
     ? iotClient.getMeterEnergyDay(meterId, `${startDate} 00:00:00`, `${endDate} 23:59:59`, adminToken).catch(() => null)
     : Promise.resolve(null);
+  
+  // Fetch live power from getMeterInfo only for online meters (offline meters won't have power)
+  const powerPromise = isOnline && roomNo
+    ? iotClient.getMeterInfo(roomNo, userToken).catch(() => null)
+    : Promise.resolve(null);
 
-  return { meterInfo, salesPromise, energyPromise };
+  return { meterInfo, salesPromise, energyPromise, powerPromise };
 }
 
 // GET - Fetch analytics data with live IoT data (OPTIMIZED with parallel processing)
@@ -165,24 +171,27 @@ export async function GET(request: NextRequest) {
     }
     console.log(`[Analytics] Total meters to process: ${totalMeterCount}`);
     
-    // Step 3: Process all meters - extract info and create sales/energy promises
+    // Step 3: Process all meters - extract info and create promises for additional data
     const meterResults: any[] = [];
-    const salesEnergyPromises: { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any> }[] = [];
+    const meterPromises: { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any>; powerPromise: Promise<any> }[] = [];
     
     for (const { meters } of projectMeters) {
       for (const meter of meters) {
-        const processed = processMeterFromList(meter, adminToken, startDate, endDate);
-        salesEnergyPromises.push(processed);
+        const processed = processMeterFromList(meter, userToken, adminToken, startDate, endDate);
+        meterPromises.push(processed);
         meterResults.push(processed.meterInfo);
       }
     }
 
-    // Fetch sales and energy data in parallel batches
+    // Fetch sales, energy, and power data in parallel batches
     const BATCH_SIZE = 10;
-    for (let i = 0; i < salesEnergyPromises.length; i += BATCH_SIZE) {
-      const batch = salesEnergyPromises.slice(i, i + BATCH_SIZE);
-      const salesResults = await Promise.all(batch.map(b => b.salesPromise));
-      const energyResults = await Promise.all(batch.map(b => b.energyPromise));
+    for (let i = 0; i < meterPromises.length; i += BATCH_SIZE) {
+      const batch = meterPromises.slice(i, i + BATCH_SIZE);
+      const [salesResults, energyResults, powerResults] = await Promise.all([
+        Promise.all(batch.map(b => b.salesPromise)),
+        Promise.all(batch.map(b => b.energyPromise)),
+        Promise.all(batch.map(b => b.powerPromise)),
+      ]);
       
       // Attach results to meter info
       for (let j = 0; j < batch.length; j++) {
@@ -190,6 +199,13 @@ export async function GET(request: NextRequest) {
         if (meterIndex < meterResults.length) {
           meterResults[meterIndex].sales = salesResults[j];
           meterResults[meterIndex].energy = energyResults[j];
+          
+          // Extract live power from getMeterInfo response
+          const powerResponse = powerResults[j];
+          if (powerResponse && (powerResponse.success === '1' || powerResponse.code === 200) && powerResponse.data) {
+            const livePower = parseFloat(powerResponse.data.p || '0');
+            meterResults[meterIndex].power = livePower;
+          }
         }
       }
     }
