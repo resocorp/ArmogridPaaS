@@ -9,12 +9,16 @@ import type {
   IvoryPaySwapResponse,
   IvoryPayCrypto,
   PaymentGateway,
+  IvoryPayVirtualAccountRequest,
+  IvoryPayVirtualAccountResponse,
+  IvoryPayBuyCryptoRequest,
+  IvoryPayBuyCryptoResponse,
 } from '@/types/ivorypay';
 import { supabaseAdmin } from '@/lib/supabase';
 
 const IVORYPAY_SECRET_KEY = process.env.IVORYPAY_SECRET_KEY!;
 const IVORYPAY_PUBLIC_KEY = process.env.NEXT_PUBLIC_IVORYPAY_PUBLIC_KEY!;
-const IVORYPAY_API_URL = 'https://api.ivorypay.io/v1';
+const IVORYPAY_API_URL = 'https://api.ivorypay.io/api/v1';
 
 /**
  * Get IvoryPay API headers
@@ -173,6 +177,133 @@ export async function fetchSwap(swapId: string): Promise<IvoryPaySwapResponse> {
   }
 
   return response.json();
+}
+
+/**
+ * Create a private customer virtual account for on-ramp payments
+ * This allows customers to pay via bank transfer (NGN) and receive crypto
+ */
+export async function createVirtualAccount(
+  request: IvoryPayVirtualAccountRequest
+): Promise<IvoryPayVirtualAccountResponse> {
+  console.log('[IvoryPay] Creating virtual account with payload:', JSON.stringify(request));
+  console.log('[IvoryPay] Using API URL:', `${IVORYPAY_API_URL}/virtual-accounts`);
+
+  const response = await fetch(`${IVORYPAY_API_URL}/virtual-accounts`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(request),
+  });
+
+  const responseText = await response.text();
+  console.log('[IvoryPay] Virtual account response status:', response.status);
+  console.log('[IvoryPay] Virtual account response body:', responseText);
+
+  if (!response.ok) {
+    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    try {
+      const errorData = JSON.parse(responseText);
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = responseText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return JSON.parse(responseText);
+}
+
+/**
+ * Get a virtual account by customer reference
+ */
+export async function getVirtualAccountByReference(
+  customerReference: string
+): Promise<IvoryPayVirtualAccountResponse> {
+  const response = await fetch(
+    `${IVORYPAY_API_URL}/virtual-accounts/customer/${customerReference}`,
+    {
+      method: 'GET',
+      headers: getHeaders(),
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to fetch virtual account');
+  }
+
+  return response.json();
+}
+
+/**
+ * Generate a unique customer reference for virtual accounts
+ */
+export function generateCustomerReference(meterId: string): string {
+  const timestamp = Date.now();
+  return `ARMOGRID_${meterId}_${timestamp}`;
+}
+
+/**
+ * Initiate Buy Crypto (Bank Transfer) - NO KYC REQUIRED
+ * This generates a temporary bank account for the customer to transfer to
+ * Account expires after ~20 minutes
+ */
+export async function initiateBuyCrypto(
+  request: IvoryPayBuyCryptoRequest
+): Promise<IvoryPayBuyCryptoResponse> {
+  console.log('[IvoryPay] Initiating Buy Crypto (Bank Transfer) with payload:', JSON.stringify(request));
+  console.log('[IvoryPay] Using API URL:', `${IVORYPAY_API_URL}/buy/initiate`);
+
+  const response = await fetch(`${IVORYPAY_API_URL}/buy/initiate`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(request),
+  });
+
+  const responseText = await response.text();
+  console.log('[IvoryPay] Buy Crypto response status:', response.status);
+  console.log('[IvoryPay] Buy Crypto response body:', responseText);
+
+  if (!response.ok) {
+    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    try {
+      const errorData = JSON.parse(responseText);
+      errorMessage = errorData.message || errorMessage;
+    } catch {
+      errorMessage = responseText || errorMessage;
+    }
+    throw new Error(errorMessage);
+  }
+
+  return JSON.parse(responseText);
+}
+
+/**
+ * Get Buy Crypto transaction status
+ */
+export async function getBuyCryptoStatus(reference: string): Promise<any> {
+  const response = await fetch(`${IVORYPAY_API_URL}/buy/transaction/${reference}`, {
+    method: 'GET',
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to get buy crypto status');
+  }
+
+  return response.json();
+}
+
+/**
+ * Generate UUIDv4 for IvoryPay references (required format)
+ */
+export function generateUuidV4(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
 }
 
 /**

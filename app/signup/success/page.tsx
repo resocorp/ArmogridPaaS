@@ -13,6 +13,7 @@ function SuccessContent() {
   const searchParams = useSearchParams();
   const reference = searchParams.get('reference');
   const name = searchParams.get('name');
+  const isFree = searchParams.get('free') === 'true';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-armogrid-navy via-armogrid-blue to-armogrid-navy flex items-center justify-center p-4">
@@ -22,7 +23,7 @@ function SuccessContent() {
             <CheckCircle2 className="w-12 h-12 text-green-600" />
           </div>
           <CardTitle className="text-2xl font-bold text-green-600">
-            Payment Successful!
+            Registration Successful!
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -33,6 +34,13 @@ function SuccessContent() {
             <p className="text-muted-foreground">
               Your registration has been received successfully.
             </p>
+            {isFree && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                <p className="text-sm text-green-700 font-medium">
+                  🎉 Your meter is FREE! Just get your electrician to run the connection to the meter.
+                </p>
+              </div>
+            )}
             {reference && (
               <p className="text-sm text-muted-foreground">
                 Reference: <span className="font-mono">{reference}</span>
@@ -53,11 +61,11 @@ function SuccessContent() {
               </li>
               <li className="flex items-start gap-2">
                 <span className="bg-blue-200 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">2</span>
-                <span>You will be contacted within 24-48 hours to schedule your meter installation</span>
+                <span>You will be contacted within 24-48 hours to coordinate meter setup</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="bg-blue-200 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">3</span>
-                <span>Once installed, you can start recharging your meter immediately</span>
+                <span>Get your electrician to run the connection to the meter, then start recharging!</span>
               </li>
             </ol>
           </div>

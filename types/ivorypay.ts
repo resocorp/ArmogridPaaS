@@ -10,6 +10,7 @@ export interface IvoryPayCreatePaymentLinkRequest {
   description: string;
   baseFiat: IvoryPayFiat;
   amount: string | number;
+  isAmountFixed: boolean;
   successMessage?: string;
   redirectLink?: string;
 }
@@ -150,25 +151,59 @@ export interface IvoryPayVirtualAccountRequest {
   lastName: string;
   email: string;
   phoneNumber: string;
-  bvn?: string;
+  middleName?: string;
+  dob: string; // Date of birth (required for private customer)
+  bvn: string; // BVN (required for private customer in Nigeria)
+  gender: 'male' | 'female';
+  address?: string;
+  customerReference: string; // Unique identifier in your system
 }
 
 export interface IvoryPayVirtualAccount {
   uuid: string;
   accountNumber: string;
-  accountName: string;
+  bankIdentifier: string;
   bankName: string;
-  bankCode: string;
-  status: string;
-  customerId: string;
-  businessId: string;
+  currency: string;
+  customerReference: string;
+  type: 'CUSTOMER_ACCOUNT' | 'PERSONAL_ACCOUNT';
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface IvoryPayVirtualAccountResponse {
-  success: boolean;
+  status: string;
+  success?: boolean;
   message: string;
   data: IvoryPayVirtualAccount;
+}
+
+export interface IvoryPayVirtualAccountTransfer {
+  uuid: string;
+  reference: string;
+  amount: number;
+  fee: number;
+  amountAfterFee: number;
+  currency: string;
+  senderAccountNumber: string;
+  senderAccountName: string;
+  senderBankName: string;
+  virtualAccountUuid: string;
+  customerReference: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface IvoryPayOnRampPayment {
+  meterId: string;
+  amount: number;
+  email: string;
+  phone: string;
+  firstName: string;
+  lastName: string;
+  dob?: string;
+  bvn?: string;
+  gender?: 'male' | 'female';
 }
 
 export interface IvoryPaySwapRequest {
@@ -203,7 +238,47 @@ export interface IvoryPaySwapResponse {
   data: IvoryPaySwap;
 }
 
-export type PaymentGateway = 'paystack' | 'ivorypay';
+export type PaymentGateway = 'paystack' | 'ivorypay' | 'ivorypay_onramp' | 'ivorypay_bank_transfer';
+
+/**
+ * IvoryPay Buy Crypto (Bank Transfer) - NO KYC REQUIRED
+ * Generates temporary bank account for each transaction
+ */
+export interface IvoryPayBuyCryptoRequest {
+  fiatAmount: number;
+  reference: string; // Must be UUIDv4
+  fiatCurrency: 'NGN' | 'USD' | 'ZAR';
+  email: string;
+  businessFeeInFiat?: number;
+  note?: string;
+  redirectUrl?: string;
+}
+
+export interface IvoryPayBuyCryptoTransferDetails {
+  accountName: string;
+  accountNumber: string;
+  bank: string;
+  amountPayable: number;
+  businessFee: number;
+  platformFee: number;
+  expiresAt: string;
+  currency: string;
+  createdAt: string;
+}
+
+export interface IvoryPayBuyCryptoResponse {
+  statusCode: number;
+  success: boolean;
+  message: string;
+  data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    reference: string;
+    refCode: string;
+    transferDetails: IvoryPayBuyCryptoTransferDetails;
+  };
+}
 
 export interface PaymentGatewayConfig {
   activeGateway: PaymentGateway;

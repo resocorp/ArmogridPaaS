@@ -277,9 +277,183 @@ async function handleTransactionFailed(data: any) {
 
 async function handleVirtualAccountTransfer(data: any) {
   console.log('[IvoryPay Webhook] Processing virtualAccountTransfer.success');
-  // Handle virtual account transfers - similar to transaction success
-  // The data structure may differ slightly
-  await handleTransactionSuccess(data);
+  console.log('[IvoryPay Webhook] Virtual account transfer data:', JSON.stringify(data));
+
+  const customerReference = data.customerReference;
+  const amount = data.amountAfterFee || data.amount;
+  const reference = data.reference;
+
+  // Find the virtual account by customer reference
+  const { data: virtualAccount } = await supabaseAdmin
+    .from('virtual_accounts')
+    .select('*')
+    .eq('customer_reference', customerReference)
+    .single();
+
+  if (!virtualAccount) {
+    console.error('[IvoryPay Webhook] Virtual account not found for customerReference:', customerReference);
+    return;
+  }
+
+  console.log('[IvoryPay Webhook] Found virtual account for meter:', virtualAccount.meter_id);
+
+  // Find pending transaction for this meter with on-ramp payment type
+  let { data: transaction } = await supabaseAdmin
+    .from('transactions')
+    .select('*')
+    .eq('meter_id', virtualAccount.meter_id)
+    .eq('payment_gateway', 'ivorypay_onramp')
+    .eq('ivorypay_status', 'pending')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .single();
+
+  // If no pending transaction, create one from the transfer
+  if (!transaction) {
+    console.log('[IvoryPay Webhook] No pending transaction found, creating from transfer');
+    const amountKobo = Math.round(amount * 100);
+    
+    const { data: newTx, error: insertError } = await supabaseAdmin
+      .from('transactions')
+      .insert({
+        meter_id: virtualAccount.meter_id,
+        amount_kobo: amountKobo,
+        ivorypay_reference: reference,
+        ivorypay_status: 'pending',
+        payment_gateway: 'ivorypay_onramp',
+        customer_email: virtualAccount.customer_email,
+        customer_phone: virtualAccount.customer_phone,
+        buy_type: 5, // On-ramp buy type
+        metadata: {
+          amount_naira: amount,
+          payment_type: 'onramp',
+          virtual_account_transfer: data,
+          customer: {
+            firstName: virtualAccount.customer_first_name,
+            lastName: virtualAccount.customer_last_name,
+          },
+        },
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error('[IvoryPay Webhook] Failed to create transaction:', insertError);
+      return;
+    }
+    transaction = newTx;
+  }
+
+  // Skip if already processed
+  if (transaction.ivorypay_status === 'success' && transaction.sale_id) {
+    console.log('[IvoryPay Webhook] Transaction already processed, skipping');
+    return;
+  }
+
+  const meterId = transaction.meter_id;
+  console.log('[IvoryPay Webhook] Processing on-ramp payment for meterId:', meterId);
+
+  try {
+    // Get admin token
+    const adminToken = await getAdminToken();
+    console.log('[IvoryPay Webhook] Admin token obtained');
+
+    // Generate sale ID
+    const saleId = generateSaleId();
+    console.log('[IvoryPay Webhook] Generated sale ID:', saleId);
+
+    // Credit meter via IoT platform
+    console.log('[IvoryPay Webhook] Calling salePower API...');
+    const saleResponse = await iotClient.salePower(
+      {
+        meterId,
+        saleMoney: transaction.amount_kobo,
+        buyType: 5, // On-ramp buy type
+        saleId,
+      },
+      adminToken
+    );
+    console.log('[IvoryPay Webhook] SalePower response:', JSON.stringify(saleResponse));
+
+    const isSuccess =
+      saleResponse.success === '1' ||
+      saleResponse.code === 200 ||
+      saleResponse.code === 0;
+
+    if (isSuccess) {
+      console.log('[IvoryPay Webhook] Meter credited successfully via on-ramp');
+
+      // Update transaction as successful
+      await supabaseAdmin
+        .from('transactions')
+        .update({
+          ivorypay_status: 'success',
+          ivorypay_reference: reference,
+          sale_id: saleId,
+          metadata: {
+            ...transaction.metadata,
+            ivorypay_response: data,
+            credited_at: new Date().toISOString(),
+            sender_account: data.senderAccountNumber,
+            sender_name: data.senderAccountName,
+            sender_bank: data.senderBankName,
+          },
+        })
+        .eq('id', transaction.id);
+
+      // Update webhook log
+      await supabaseAdmin
+        .from('webhook_logs')
+        .update({ processed: true })
+        .eq('reference', reference);
+
+      console.log(`[IvoryPay Webhook] Successfully credited meter ${meterId} with ₦${transaction.amount_kobo / 100} via bank transfer`);
+
+      // Send SMS notification
+      if (transaction.customer_phone || virtualAccount.customer_phone) {
+        try {
+          await sendPaymentSuccessSms({
+            name: virtualAccount.customer_first_name || 'Customer',
+            phone: transaction.customer_phone || virtualAccount.customer_phone,
+            amount: transaction.amount_kobo / 100,
+            meterId: meterId,
+            reference: reference,
+            balance: (saleResponse as any).balance || saleResponse.data?.balance,
+          });
+          console.log('[IvoryPay Webhook] Payment success SMS sent');
+        } catch (smsError) {
+          console.error('[IvoryPay Webhook] Failed to send SMS:', smsError);
+        }
+      }
+    } else {
+      const rawErrorMsg = saleResponse.errorMsg || saleResponse.msg || 'Failed to credit meter';
+      const errorMsg = translateErrorMessage(rawErrorMsg);
+      console.error('[IvoryPay Webhook] SalePower failed:', errorMsg);
+      throw new Error(errorMsg);
+    }
+  } catch (error: any) {
+    console.error('[IvoryPay Webhook] Error processing on-ramp webhook:', error);
+
+    // Log error
+    await supabaseAdmin
+      .from('webhook_logs')
+      .update({
+        error: error.message,
+        processed: false,
+      })
+      .eq('reference', reference);
+
+    // Update transaction with error
+    await supabaseAdmin
+      .from('transactions')
+      .update({
+        metadata: {
+          ...transaction.metadata,
+          processing_error: error.message,
+        },
+      })
+      .eq('id', transaction.id);
+  }
 }
 
 async function handleRegistrationSuccess(registration: any, data: any) {

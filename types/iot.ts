@@ -129,7 +129,7 @@ export interface MeterControlResponse {
 export interface SalePowerRequest {
   meterId: string;
   saleMoney: number; // in kobo
-  buyType: 0 | 1 | 3 | 4; // 0 = cash, 1 = card, 3 = paystack, 4 = ivorypay
+  buyType: 0 | 1 | 3 | 4 | 5; // 0 = cash, 1 = card, 3 = paystack, 4 = ivorypay, 5 = ivorypay_onramp
   saleId: string; // unique transaction ID
 }
 

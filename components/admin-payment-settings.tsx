@@ -20,11 +20,12 @@ import {
 import { toast } from 'sonner';
 
 interface PaymentSettings {
-  activeGateway: 'paystack' | 'ivorypay';
+  activeGateway: 'paystack' | 'ivorypay' | 'ivorypay_onramp' | 'ivorypay_bank_transfer';
   paystackEnabled: boolean;
   ivorypayEnabled: boolean;
   ivorypayDefaultCrypto: 'USDT' | 'USDC' | 'SOL';
   ivorypayAutoSwapToUsdt: boolean;
+  ivorypayOnRampEnabled: boolean;
   paystackConfigured: boolean;
   ivorypayConfigured: boolean;
 }
@@ -38,6 +39,7 @@ export function AdminPaymentSettings() {
     ivorypayEnabled: false,
     ivorypayDefaultCrypto: 'USDT',
     ivorypayAutoSwapToUsdt: true,
+    ivorypayOnRampEnabled: false,
     paystackConfigured: false,
     ivorypayConfigured: false,
   });
@@ -55,6 +57,7 @@ export function AdminPaymentSettings() {
           ivorypayEnabled: data.data.ivorypayEnabled === true,
           ivorypayDefaultCrypto: data.data.ivorypayDefaultCrypto || 'USDT',
           ivorypayAutoSwapToUsdt: data.data.ivorypayAutoSwapToUsdt !== false,
+          ivorypayOnRampEnabled: data.data.ivorypayOnRampEnabled === true,
           paystackConfigured: data.data.paystackConfigured || false,
           ivorypayConfigured: data.data.ivorypayConfigured || false,
         });
@@ -84,6 +87,7 @@ export function AdminPaymentSettings() {
             ivorypay_enabled: settings.ivorypayEnabled.toString(),
             ivorypay_default_crypto: settings.ivorypayDefaultCrypto,
             ivorypay_auto_swap_to_usdt: settings.ivorypayAutoSwapToUsdt.toString(),
+            ivorypay_onramp_enabled: settings.ivorypayOnRampEnabled.toString(),
           },
         }),
       });
@@ -147,15 +151,18 @@ export function AdminPaymentSettings() {
               <Select
                 value={settings.activeGateway}
                 onChange={(e) =>
-                  setSettings({ ...settings, activeGateway: e.target.value as 'paystack' | 'ivorypay' })
+                  setSettings({ ...settings, activeGateway: e.target.value as 'paystack' | 'ivorypay' | 'ivorypay_onramp' | 'ivorypay_bank_transfer' })
                 }
-                className="w-[200px]"
+                className="w-[280px]"
               >
                 <option value="paystack" disabled={!settings.paystackConfigured}>
                   Paystack {!settings.paystackConfigured && '(Not configured)'}
                 </option>
                 <option value="ivorypay" disabled={!settings.ivorypayConfigured}>
-                  IvoryPay {!settings.ivorypayConfigured && '(Not configured)'}
+                  IvoryPay Crypto {!settings.ivorypayConfigured && '(Not configured)'}
+                </option>
+                <option value="ivorypay_bank_transfer" disabled={!settings.ivorypayConfigured}>
+                  IvoryPay Bank Transfer (No KYC) {!settings.ivorypayConfigured && '(Not configured)'}
                 </option>
               </Select>
               <Badge
@@ -163,10 +170,16 @@ export function AdminPaymentSettings() {
                 className={
                   settings.activeGateway === 'paystack'
                     ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                    : settings.activeGateway === 'ivorypay_bank_transfer'
+                    ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
                     : 'bg-purple-500/10 text-purple-500 border-purple-500/20'
                 }
               >
-                {settings.activeGateway === 'paystack' ? 'Card/Bank Payments' : 'Crypto Payments (NGN)'}
+                {settings.activeGateway === 'paystack' 
+                  ? 'Card/Bank Payments' 
+                  : settings.activeGateway === 'ivorypay_bank_transfer'
+                  ? 'Bank Transfer (No KYC Required)'
+                  : 'Direct Crypto Payments'}
               </Badge>
             </div>
           </CardContent>

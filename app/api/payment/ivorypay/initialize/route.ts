@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initiateTransaction, generateIvoryPayReference, calculateIvoryPayFee, getPaymentGatewayConfig } from '@/lib/ivorypay';
+import { createPaymentLink, generateIvoryPayReference, calculateIvoryPayFee, getPaymentGatewayConfig } from '@/lib/ivorypay';
 import { iotClient } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
@@ -102,56 +102,52 @@ export async function POST(request: NextRequest) {
     const config = await getPaymentGatewayConfig();
     const crypto = config.ivorypayDefaultCrypto || 'USDT';
 
-    // Create IvoryPay transaction using the transactions endpoint
-    console.log('[IvoryPay Init] Creating IvoryPay transaction...');
-    const transactionResponse = await initiateTransaction({
+    // Create IvoryPay payment link
+    console.log('[IvoryPay Init] Creating IvoryPay payment link...');
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    
+    const paymentLinkResponse = await createPaymentLink({
+      name: `Meter Recharge - ${meterId}`,
+      description: `Power recharge for meter ${meterId}`,
       baseFiat: 'NGN',
       amount: feeBreakdown.totalAmount,
-      crypto: crypto,
-      email: email,
-      reference: reference,
-      metadata: {
-        meterId: meterId,
-        originalAmount: amount,
-        fee: feeBreakdown.fee,
-      },
+      isAmountFixed: true,
+      redirectLink: `${appUrl}/payment/success?reference=${reference}`,
     });
 
-    if (!transactionResponse.success) {
-      console.error('[IvoryPay Init] Failed to create transaction:', transactionResponse.message);
-      throw new Error(transactionResponse.message);
+    if (!paymentLinkResponse.success) {
+      console.error('[IvoryPay Init] Failed to create payment link:', paymentLinkResponse.message);
+      throw new Error(paymentLinkResponse.message);
     }
 
-    const txData = transactionResponse.data;
-    console.log('[IvoryPay Init] Transaction created:', {
-      reference: txData.reference,
-      address: txData.address,
-      expectedAmountInCrypto: txData.expectedAmountWithFeeInCrypto,
-      crypto: txData.crypto,
+    const linkData = paymentLinkResponse.data;
+    // Construct payment URL with customer info pre-fill params
+    const checkoutParams = new URLSearchParams({
+      email: email,
+      firstName: 'Customer',
+      lastName: meterId,
+    });
+    const paymentUrl = `https://checkout.ivorypay.io/checkout/${linkData.reference}?${checkoutParams.toString()}`;
+    console.log('[IvoryPay Init] Payment link created:', {
+      reference: reference,
+      ivorypayRef: linkData.reference,
+      paymentUrl: paymentUrl,
     });
 
-    // Update transaction with IvoryPay transaction details
+    // Update transaction with IvoryPay payment link details
     await supabaseAdmin
       .from('transactions')
       .update({
-        crypto_amount: txData.expectedAmountWithFeeInCrypto,
-        crypto_currency: txData.crypto,
         metadata: {
           amount_naira: amount,
           fee: feeBreakdown.fee,
           total_amount: feeBreakdown.totalAmount,
-          ivorypay_tx_id: txData.id || txData.uuid,
-          crypto_address: txData.address,
-          expected_crypto_amount: txData.expectedAmountWithFeeInCrypto,
-          usd_amount: txData.expectedAmountInUSD,
+          ivorypay_link_uuid: linkData.uuid,
+          ivorypay_link_ref: linkData.reference,
+          payment_link: paymentUrl,
         },
       })
       .eq('ivorypay_reference', reference);
-
-    // Build payment page URL with transaction details
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const paymentUrl = `${appUrl}/payment/crypto?reference=${reference}&address=${encodeURIComponent(txData.address)}&amount=${txData.expectedAmountWithFeeInCrypto}&crypto=${txData.crypto}&naira=${amount}`;
-    console.log('[IvoryPay Init] Payment URL:', paymentUrl);
 
     console.log('[IvoryPay Init] ===== Payment initialization completed =====\n');
     return NextResponse.json({
@@ -159,14 +155,10 @@ export async function POST(request: NextRequest) {
       data: {
         payment_url: paymentUrl,
         reference: reference,
-        ivorypay_reference: txData.reference,
-        address: txData.address,
         amount: amount,
         fee: feeBreakdown.fee,
         total_amount: feeBreakdown.totalAmount,
-        crypto_amount: txData.expectedAmountWithFeeInCrypto,
-        crypto: txData.crypto,
-        usd_amount: txData.expectedAmountInUSD,
+        crypto: crypto,
       },
     });
   } catch (error: any) {

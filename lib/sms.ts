@@ -668,6 +668,49 @@ export async function sendBulkOfflineAlert(meterCount: number, projectName?: str
 }
 
 /**
+ * Send registration confirmation SMS to customer
+ */
+export async function sendRegistrationSms(data: {
+  name: string;
+  phone: string;
+  roomNumber: string;
+  locationName?: string;
+}): Promise<boolean> {
+  const message = `Welcome to ArmogridSolar, ${data.name}! Your registration for Room ${data.roomNumber}${data.locationName ? ` at ${data.locationName}` : ''} is confirmed. Your meter is FREE! Please arrange for your electrician to run the connection to the meter. We'll contact you within 24-48hrs. Questions? Call +2347035090096`;
+  
+  const result = await sendSms(data.phone, message, 'welcome');
+  return result.success;
+}
+
+/**
+ * Send new registration alert to admin phones
+ */
+export async function sendRegistrationAlertToAdmin(data: {
+  name: string;
+  phone: string;
+  email: string;
+  roomNumber: string;
+  locationName?: string;
+}): Promise<boolean> {
+  const adminPhones = await getAdminPhones();
+  
+  if (adminPhones.length === 0) {
+    console.log('[SMS] No admin phones configured for registration alerts');
+    return false;
+  }
+
+  const message = `🆕 NEW REGISTRATION\nName: ${data.name}\nPhone: ${data.phone}\nEmail: ${data.email}\nRoom: ${data.roomNumber}\nLocation: ${data.locationName || 'N/A'}\nMeter: FREE`;
+  
+  let allSent = true;
+  for (const phone of adminPhones) {
+    const result = await sendSms(phone, message, 'custom');
+    if (!result.success) allSent = false;
+  }
+  
+  return allSent;
+}
+
+/**
  * Test SMS configuration by sending a test message
  */
 export async function testSmsConfig(phoneNumber: string): Promise<{ success: boolean; error?: string; response?: string }> {

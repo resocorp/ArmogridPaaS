@@ -109,14 +109,14 @@ export default function HomePage() {
       return null;
     }
 
-    if (activePaymentGateway === 'ivorypay') {
+    if (activePaymentGateway === 'ivorypay' || activePaymentGateway === 'ivorypay_onramp' || activePaymentGateway === 'ivorypay_bank_transfer') {
       // IvoryPay fee: approximately 1%
       const fee = Math.ceil(amountNum * IVORYPAY_FEE.PERCENTAGE);
       return {
         rechargeAmount: amountNum,
         fee,
         totalAmount: amountNum + fee,
-        feeDescription: '1% IvoryPay fee',
+        feeDescription: (activePaymentGateway === 'ivorypay_onramp' || activePaymentGateway === 'ivorypay_bank_transfer') ? '1% Bank Transfer fee' : '1% IvoryPay fee',
       };
     }
 
@@ -207,8 +207,8 @@ export default function HomePage() {
     setIsLoading(true);
 
     try {
-      if (activePaymentGateway === 'ivorypay') {
-        // IvoryPay payment flow
+      if (activePaymentGateway === 'ivorypay' || activePaymentGateway === 'ivorypay_onramp' || activePaymentGateway === 'ivorypay_bank_transfer') {
+        // IvoryPay payment flow - uses Payment Links API with pre-filled customer info
         const response = await fetch('/api/payment/ivorypay/initialize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -225,8 +225,8 @@ export default function HomePage() {
           throw new Error(data.error || 'Failed to initialize payment');
         }
 
-        // Redirect to IvoryPay payment page
-        toast.info('Redirecting to IvoryPay...');
+        // Redirect to IvoryPay checkout with pre-filled customer info
+        toast.info('Redirecting to payment...');
         window.location.href = data.data.payment_url;
       } else {
         // Paystack payment flow
@@ -298,7 +298,6 @@ export default function HomePage() {
           roomNumber: signupRoom.trim(),
           locationId: signupLocation,
           locationName: selectedLocation?.name,
-          paymentGateway: activePaymentGateway,
         }),
       });
 
@@ -308,13 +307,9 @@ export default function HomePage() {
         throw new Error(data.error || 'Failed to process registration');
       }
 
-      // Redirect to appropriate payment page
-      toast.success('Redirecting to payment...');
-      if (activePaymentGateway === 'ivorypay' && data.data.payment_url) {
-        window.location.href = data.data.payment_url;
-      } else {
-        window.location.href = data.data.authorization_url;
-      }
+      // Registration successful - redirect to success page
+      toast.success('Registration successful!');
+      window.location.href = `/signup/success?name=${encodeURIComponent(signupName.trim())}&free=true`;
     } catch (error: any) {
       toast.error(error.message || 'Failed to process registration');
       setIsSignupLoading(false);
@@ -334,7 +329,7 @@ export default function HomePage() {
     
     const baseAmount = signupAmount * roomCount;
     
-    if (activePaymentGateway === 'ivorypay') {
+    if (activePaymentGateway === 'ivorypay' || activePaymentGateway === 'ivorypay_onramp' || activePaymentGateway === 'ivorypay_bank_transfer') {
       // IvoryPay fee: approximately 1%
       const fee = Math.ceil(baseAmount * IVORYPAY_FEE.PERCENTAGE);
       return {
@@ -513,6 +508,19 @@ export default function HomePage() {
                     <h3 className="text-2xl font-bold">New Customer Sign Up</h3>
                     <p className="text-sm text-muted-foreground">Register for prepaid electricity service</p>
                   </div>
+                  
+                  {/* Scrolling Notice Banner */}
+                  <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg p-2 mb-4 overflow-hidden">
+                    <div className="animate-marquee whitespace-nowrap">
+                      <span className="text-white text-sm font-medium inline-block px-4">
+                        🎉 Meter is now FREE! Customers only need to get their prefered electrician to run their cable to the meter. 🎉
+                      </span>
+                      <span className="text-white text-sm font-medium inline-block px-4">
+                        🎉 Meter is now FREE! Customers only need to get their prefered electrician to run their cable to the meter. 🎉
+                      </span>
+                    </div>
+                  </div>
+
                   <form onSubmit={handleSignup} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signupName" className="text-sm font-semibold flex items-center gap-2">
@@ -604,34 +612,17 @@ export default function HomePage() {
                       </Select>
                     </div>
 
-                    {signupFeeCalculation && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <Info className="w-4 h-4 text-green-600" />
-                            <span className="text-sm font-medium text-green-900">Setup Fee:</span>
-                          </div>
-                          <span className="text-lg font-bold text-green-900">₦{signupFeeCalculation.total.toLocaleString()}</span>
-                        </div>
-                        {signupFeeCalculation.roomCount > 1 && (
-                          <p className="text-xs text-green-700">
-                            ₦{signupFeeCalculation.unitAmount.toLocaleString()} × {signupFeeCalculation.roomCount} rooms + ₦{signupFeeCalculation.fee.toLocaleString()} fee
-                          </p>
-                        )}
-                      </div>
-                    )}
-
                     <Button
                       type="submit"
                       className="w-full h-11 text-base font-semibold bg-armogrid-red hover:bg-armogrid-red/90 shadow-lg"
-                      disabled={isSignupLoading || !signupFeeCalculation}
+                      disabled={isSignupLoading || !signupLocation}
                     >
-                      {isSignupLoading ? 'Processing...' : signupFeeCalculation ? `Pay ₦${signupFeeCalculation.total.toLocaleString()}` : 'Loading...'}
+                      {isSignupLoading ? 'Processing...' : 'Register Now - FREE'}
                     </Button>
 
-                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                      <Shield className="w-4 h-4" />
-                      <span>Secure payment powered by Paystack</span>
+                    <div className="flex items-center justify-center gap-2 text-xs text-green-600 font-medium">
+                      <Zap className="w-4 h-4" />
+                      <span>Free meter registration - No payment required</span>
                     </div>
                   </form>
                 </TabsContent>
