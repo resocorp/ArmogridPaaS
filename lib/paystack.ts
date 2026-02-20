@@ -2,11 +2,17 @@ import crypto from 'crypto';
 import type { InitializePaymentResponse, VerifyPaymentResponse } from '@/types/payment';
 import { PAYSTACK_FEE } from '@/lib/constants';
 
-const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY!;
-const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!;
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
+const PAYSTACK_PUBLIC_KEY = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
 
-if (!PAYSTACK_SECRET_KEY) {
-  throw new Error('Missing PAYSTACK_SECRET_KEY environment variable');
+function getSecretKey(): string {
+  if (!PAYSTACK_SECRET_KEY) throw new Error('Missing PAYSTACK_SECRET_KEY environment variable');
+  return PAYSTACK_SECRET_KEY;
+}
+
+function getPublicKey(): string {
+  if (!PAYSTACK_PUBLIC_KEY) throw new Error('Missing NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY environment variable');
+  return PAYSTACK_PUBLIC_KEY;
 }
 
 /**
@@ -96,7 +102,7 @@ export async function initializePayment(
   const response = await fetch('https://api.paystack.co/transaction/initialize', {
     method: 'POST',
     headers: {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+      Authorization: `Bearer ${getSecretKey()}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
@@ -124,7 +130,7 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
   const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
     method: 'GET',
     headers: {
-      Authorization: `Bearer ${PAYSTACK_SECRET_KEY}`,
+      Authorization: `Bearer ${getSecretKey()}`,
     },
   });
 
@@ -141,7 +147,7 @@ export async function verifyPayment(reference: string): Promise<VerifyPaymentRes
  */
 export function verifyWebhookSignature(payload: string, signature: string): boolean {
   const hash = crypto
-    .createHmac('sha512', PAYSTACK_SECRET_KEY)
+    .createHmac('sha512', getSecretKey())
     .update(payload)
     .digest('hex');
   
@@ -152,7 +158,7 @@ export function verifyWebhookSignature(payload: string, signature: string): bool
  * Get Paystack public key (for client-side)
  */
 export function getPaystackPublicKey(): string {
-  return PAYSTACK_PUBLIC_KEY;
+  return getPublicKey();
 }
 
 /**

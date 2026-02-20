@@ -11,9 +11,10 @@ import { Select } from '@/components/ui/select';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { isValidMeterId, formatNaira } from '@/lib/utils';
-import { MIN_RECHARGE_AMOUNT, MAX_RECHARGE_AMOUNT, PAYSTACK_FEE } from '@/lib/constants';
+import { MIN_RECHARGE_AMOUNT, MAX_RECHARGE_AMOUNT } from '@/lib/constants';
 import type { PaymentGateway } from '@/types/ivorypay';
-import { IVORYPAY_FEE } from '@/lib/ivorypay';
+import { calculateIvoryPayFee } from '@/lib/ivorypay';
+import { calculatePaystackFee } from '@/lib/paystack';
 
 interface Location {
   id: string;
@@ -102,47 +103,22 @@ export default function HomePage() {
     }
   };
 
-  // Calculate fee in real-time based on active payment gateway
   const feeCalculation = useMemo(() => {
     const amountNum = parseFloat(amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      return null;
-    }
+    if (isNaN(amountNum) || amountNum <= 0) return null;
 
     if (activePaymentGateway === 'ivorypay' || activePaymentGateway === 'ivorypay_onramp' || activePaymentGateway === 'ivorypay_bank_transfer') {
-      // IvoryPay fee: approximately 1%
-      const fee = Math.ceil(amountNum * IVORYPAY_FEE.PERCENTAGE);
+      const { fee, totalAmount } = calculateIvoryPayFee(amountNum);
       return {
         rechargeAmount: amountNum,
         fee,
-        totalAmount: amountNum + fee,
+        totalAmount,
         feeDescription: (activePaymentGateway === 'ivorypay_onramp' || activePaymentGateway === 'ivorypay_bank_transfer') ? '1% Bank Transfer fee' : '1% IvoryPay fee',
       };
     }
 
-    // Paystack fees: 1.5% + ₦100 (capped at ₦2,000)
-    // ₦100 fee is waived for transactions under ₦2,500
-    const percentageFee = Math.ceil(amountNum * PAYSTACK_FEE.LOCAL_PERCENTAGE);
-    const flatFee = amountNum >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
-    
-    let fee = percentageFee + flatFee;
-    fee = Math.min(fee, PAYSTACK_FEE.LOCAL_CAP); // Cap at ₦2,000
-    
-    const totalAmount = amountNum + fee;
-    
-    let feeDescription: string;
-    if (amountNum < PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD) {
-      feeDescription = '1.5% (₦100 fee waived)';
-    } else {
-      feeDescription = '1.5% + ₦100';
-    }
-
-    return {
-      rechargeAmount: amountNum,
-      fee,
-      totalAmount,
-      feeDescription,
-    };
+    const { fee, totalAmount, feeDescription } = calculatePaystackFee(amountNum);
+    return { rechargeAmount: amountNum, fee, totalAmount, feeDescription };
   }, [amount, activePaymentGateway]);
 
   const validateMeter = async (meterIdToValidate: string) => {
@@ -323,37 +299,17 @@ export default function HomePage() {
     return rooms.length;
   }, [signupRoom]);
 
-  // Calculate signup fee breakdown (multiplied by number of rooms)
   const signupFeeCalculation = useMemo(() => {
     if (!signupAmount || roomCount === 0) return null;
-    
     const baseAmount = signupAmount * roomCount;
-    
+
     if (activePaymentGateway === 'ivorypay' || activePaymentGateway === 'ivorypay_onramp' || activePaymentGateway === 'ivorypay_bank_transfer') {
-      // IvoryPay fee: approximately 1%
-      const fee = Math.ceil(baseAmount * IVORYPAY_FEE.PERCENTAGE);
-      return {
-        amount: baseAmount,
-        unitAmount: signupAmount,
-        roomCount,
-        fee,
-        total: baseAmount + fee,
-      };
+      const { fee, totalAmount } = calculateIvoryPayFee(baseAmount);
+      return { amount: baseAmount, unitAmount: signupAmount, roomCount, fee, total: totalAmount };
     }
-    
-    // Paystack fees
-    const percentageFee = Math.ceil(baseAmount * PAYSTACK_FEE.LOCAL_PERCENTAGE);
-    const flatFee = baseAmount >= PAYSTACK_FEE.LOCAL_FLAT_THRESHOLD ? PAYSTACK_FEE.LOCAL_FLAT : 0;
-    let fee = percentageFee + flatFee;
-    fee = Math.min(fee, PAYSTACK_FEE.LOCAL_CAP);
-    
-    return {
-      amount: baseAmount,
-      unitAmount: signupAmount,
-      roomCount,
-      fee,
-      total: baseAmount + fee,
-    };
+
+    const { fee, totalAmount } = calculatePaystackFee(baseAmount);
+    return { amount: baseAmount, unitAmount: signupAmount, roomCount, fee, total: totalAmount };
   }, [signupAmount, roomCount, activePaymentGateway]);
 
   return (

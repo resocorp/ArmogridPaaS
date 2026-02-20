@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
+import { loadMeterCredentials } from '@/lib/meter-credentials';
 
 interface MeterStatus {
   normal: number;
@@ -165,41 +166,8 @@ export async function GET(request: NextRequest) {
     }
     console.log(`[Analytics] Total meters to process: ${totalMeterCount}`);
     
-    // Load all meter credentials from Supabase to use per-meter tokens for getMeterInfo
-    const credentialsMap = new Map<string, string>(); // roomNo -> iot_token
-    try {
-      const { data: allCreds } = await supabaseAdmin
-        .from('meter_credentials')
-        .select('room_no, iot_token, token_expires_at, username, password_hash');
-
-      if (allCreds) {
-        for (const cred of allCreds) {
-          let token = cred.iot_token;
-          // Refresh token if expired
-          const tokenExpired = !cred.token_expires_at || new Date(cred.token_expires_at) < new Date();
-          if (tokenExpired && cred.username && cred.password_hash) {
-            try {
-              const loginResp = await iotClient.login(cred.username, cred.password_hash, 1);
-              if ((loginResp.success === '1' || loginResp.code === 200) && loginResp.data) {
-                token = loginResp.data;
-                const tokenExpiresAt = new Date();
-                tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);
-                await supabaseAdmin
-                  .from('meter_credentials')
-                  .update({ iot_token: token, token_expires_at: tokenExpiresAt.toISOString() })
-                  .eq('room_no', cred.room_no);
-              }
-            } catch (e) {
-              console.error(`[Analytics] Failed to refresh token for ${cred.room_no}:`, e);
-            }
-          }
-          if (token) credentialsMap.set(cred.room_no, token);
-        }
-        console.log(`[Analytics] Loaded ${credentialsMap.size} per-meter tokens from meter_credentials`);
-      }
-    } catch (e) {
-      console.error('[Analytics] Failed to load meter credentials, falling back to global userToken:', e);
-    }
+    const credentialsMap = await loadMeterCredentials();
+    console.log(`[Analytics] Loaded ${credentialsMap.size} per-meter tokens from meter_credentials`);
 
     // Step 3: Process all meters - extract info and create promises for additional data
     const meterResults: any[] = [];

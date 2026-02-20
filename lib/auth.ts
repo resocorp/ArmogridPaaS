@@ -145,59 +145,36 @@ export async function requireAdmin(): Promise<Session> {
  * Get admin token from environment or session
  */
 export async function getAdminToken(): Promise<string> {
-  console.log('[Auth] Getting admin token...');
-  
   // Try to get from environment first (for background operations)
   const envToken = process.env.IOT_ADMIN_TOKEN;
-  if (envToken) {
-    console.log('[Auth] Using admin token from environment');
-    return envToken;
-  }
+  if (envToken) return envToken;
 
   // Try to get from session (if logged in as admin)
   const session = await getSession();
-  if (session?.userType === 0) {
-    console.log('[Auth] Using admin token from session');
-    return session.token;
-  }
+  if (session?.userType === 0) return session.token;
 
-  // If no admin token available, login using credentials
-  console.log('[Auth] No cached token found, logging in as admin...');
+  // Fall back to logging in with admin credentials
   const { iotClient } = await import('./iot-client');
-  const username = process.env.IOT_ADMIN_USERNAME!;
-  const password = process.env.IOT_ADMIN_PASSWORD!;
+  const username = process.env.IOT_ADMIN_USERNAME;
+  const password = process.env.IOT_ADMIN_PASSWORD;
 
   if (!username || !password) {
-    console.error('[Auth] Admin credentials not configured in environment');
     throw new Error('Admin credentials not configured');
   }
 
-  console.log(`[Auth] Logging in with username: ${username}`);
   const response = await iotClient.login(username, password, 0);
-  console.log(`[Auth] Login response:`, JSON.stringify(response));
 
   // Handle new API format (success/errorCode/errorMsg)
   if (response.success !== undefined) {
-    if (response.success === '1' && response.data) {
-      console.log('[Auth] Successfully obtained admin token (new format)');
-      return response.data; // Token is directly in data field
-    } else {
-      console.error('[Auth] Failed to get admin token (new format):', response);
-      throw new Error(`Failed to get admin token: ${response.errorMsg || 'Unknown error'}`);
-    }
+    if (response.success === '1' && response.data) return response.data;
+    throw new Error(`Failed to get admin token: ${response.errorMsg || 'Unknown error'}`);
   }
 
   // Handle legacy API format (code/msg)
   if (response.code !== undefined) {
-    if ((response.code === 200 || response.code === 0) && response.data) {
-      console.log('[Auth] Successfully obtained admin token (legacy format)');
-      return response.data; // Assume token is in data field
-    } else {
-      console.error('[Auth] Failed to get admin token (legacy format):', response);
-      throw new Error(`Failed to get admin token: ${response.msg || 'Unknown error'}`);
-    }
+    if ((response.code === 200 || response.code === 0) && response.data) return response.data;
+    throw new Error(`Failed to get admin token: ${response.msg || 'Unknown error'}`);
   }
 
-  console.error('[Auth] Unexpected response format:', response);
   throw new Error('Failed to get admin token: Unexpected response format');
 }

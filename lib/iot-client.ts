@@ -39,10 +39,6 @@ class IotClient {
     }
 
     const url = `${this.baseUrl}${endpoint}`;
-    console.log(`[IoT Client] ${fetchOptions.method || 'GET'} ${url}`);
-    if (fetchOptions.body) {
-      console.log('[IoT Client] Request body:', fetchOptions.body);
-    }
 
     // Bypass SSL verification for expired certificates (temporary workaround)
     // @ts-ignore - Node.js specific property
@@ -57,17 +53,13 @@ class IotClient {
       agent,
     });
 
-    console.log(`[IoT Client] Response status: ${response.status} ${response.statusText}`);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`[IoT Client] Error response:`, errorText);
+      console.error(`[IoT] ${fetchOptions.method || 'GET'} ${url} failed (${response.status}):`, errorText);
       throw new Error(`IoT API Error: ${response.statusText}`);
     }
 
-    const data = await response.json();
-    console.log('[IoT Client] Response data:', JSON.stringify(data));
-    return data;
+    return response.json();
   }
 
   /**

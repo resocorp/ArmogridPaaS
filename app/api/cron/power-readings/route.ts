@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAdminToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
+import { loadMeterCredentials } from '@/lib/meter-credentials';
 
 // This endpoint is designed to be called by a cron job (e.g., Vercel Cron)
 // It records power readings from all meters periodically
@@ -26,40 +27,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No admin token' }, { status: 500 });
     }
 
-    // Load per-meter credentials from Supabase
-    const credentialsMap = new Map<string, string>(); // roomNo -> iot_token
-    try {
-      const { data: allCreds } = await supabaseAdmin
-        .from('meter_credentials')
-        .select('room_no, iot_token, token_expires_at, username, password_hash');
-
-      if (allCreds) {
-        for (const cred of allCreds) {
-          let token = cred.iot_token;
-          const tokenExpired = !cred.token_expires_at || new Date(cred.token_expires_at) < new Date();
-          if (tokenExpired && cred.username && cred.password_hash) {
-            try {
-              const loginResp = await iotClient.login(cred.username, cred.password_hash, 1);
-              if ((loginResp.success === '1' || loginResp.code === 200) && loginResp.data) {
-                token = loginResp.data;
-                const tokenExpiresAt = new Date();
-                tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);
-                await supabaseAdmin
-                  .from('meter_credentials')
-                  .update({ iot_token: token, token_expires_at: tokenExpiresAt.toISOString() })
-                  .eq('room_no', cred.room_no);
-              }
-            } catch (e) {
-              console.error(`[Cron] Failed to refresh token for ${cred.room_no}:`, e);
-            }
-          }
-          if (token) credentialsMap.set(cred.room_no, token);
-        }
-        console.log(`[Cron] Loaded ${credentialsMap.size} per-meter tokens from meter_credentials`);
-      }
-    } catch (e) {
-      console.error('[Cron] Failed to load meter credentials:', e);
-    }
+    const credentialsMap = await loadMeterCredentials();
+    console.log(`[Cron] Loaded ${credentialsMap.size} per-meter tokens from meter_credentials`);
 
     // Fetch all projects
     const projectsResponse = await iotClient.getProjectList('', 100, 1, adminToken);

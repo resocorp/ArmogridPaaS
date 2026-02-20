@@ -59,38 +59,16 @@ export const SESSION_COOKIE_NAME = "armogrid_session";
 // Session expiry (7 days in milliseconds)
 export const SESSION_EXPIRY = 7 * 24 * 60 * 60 * 1000;
 
-// API Routes
-export const API_ROUTES = {
-  AUTH: {
-    LOGIN: "/api/auth/login",
-    LOGOUT: "/api/auth/logout",
-    ME: "/api/auth/me",
-  },
-  PAYMENT: {
-    INITIALIZE: "/api/payment/initialize",
-    VERIFY: "/api/payment/verify",
-  },
-  METERS: {
-    LIST: "/api/meters",
-    DETAILS: (id: string) => `/api/meters/${id}`,
-    CONTROL: (id: string) => `/api/meters/${id}/control`,
-    ENERGY: (id: string) => `/api/meters/${id}/energy`,
-  },
-  TRANSACTIONS: "/api/transactions",
-} as const;
-
-// Public Routes (no auth required)
+// Public Routes (no auth required) — used by middleware
 export const PUBLIC_ROUTES = [
   "/",
   "/login",
   "/payment/success",
   "/payment/failed",
+  "/faqs",
 ];
 
-// Admin-only Routes
+// Admin-only page routes — used by middleware
 export const ADMIN_ROUTES = [
   "/admin",
-  "/admin/meters",
-  "/admin/sales",
-  "/admin/users",
 ];

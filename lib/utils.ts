@@ -37,17 +37,23 @@ export function formatDate(date: Date | string): string {
 }
 
 /**
- * Generate unique sale ID (timestamp-based)
+ * Generate unique sale ID
+ * Uses crypto.randomUUID when available, falls back to timestamp + random suffix
  */
 export function generateSaleId(): string {
-  return Date.now().toString();
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+  }
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  return `${Date.now()}${random}`;
 }
 
 /**
  * Validate meter ID format
+ * Meter IDs are numeric strings between 4 and 20 digits
  */
 export function isValidMeterId(meterId: string): boolean {
-  return /^\d+$/.test(meterId) && meterId.length > 0;
+  return /^\d{4,20}$/.test(meterId);
 }
 
 /**

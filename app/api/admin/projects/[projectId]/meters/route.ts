@@ -41,7 +41,7 @@ export async function GET(
         balance: meter.balance || '0',
         switchSta: meter.switchSta,
         unConnect,
-        unConnnect: unConnect, // Keep both for backward compatibility
+        unConnnect: unConnect, // External API typo (3 n's) — kept for backward compat with legacy consumers
         controlMode: meter.prepaidType,
         readValue: meter.EPI,
         model: meter.model,
