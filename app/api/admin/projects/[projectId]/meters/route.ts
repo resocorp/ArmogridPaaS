@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, getAdminToken, getUserToken } from '@/lib/auth';
+import { requireAdmin, getAdminToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 
 export async function GET(
@@ -11,18 +11,9 @@ export async function GET(
     const adminToken = await getAdminToken();
     const { projectId } = await params;
 
-    // Get user token for appProjectMeterList API
-    let userToken: string;
-    try {
-      userToken = await getUserToken();
-    } catch (e) {
-      console.log('[Admin Meters] Failed to get user token, falling back to admin token');
-      userToken = adminToken;
-    }
-
     // Use appProjectMeterList to get all meters with full details in one call
     console.log(`[Admin Meters] Fetching meters for project: ${projectId}`);
-    const meterListResponse = await iotClient.getProjectMeterList(projectId, userToken);
+    const meterListResponse = await iotClient.getProjectMeterList(projectId, adminToken);
     
     if (meterListResponse.success !== '1') {
       return NextResponse.json(

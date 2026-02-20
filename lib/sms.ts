@@ -532,7 +532,7 @@ export async function sendWelcomeSms(data: CustomerNotificationData): Promise<bo
  */
 export async function sendLowCreditSms(data: CustomerNotificationData): Promise<boolean> {
   const balance = data.balance?.toLocaleString() || '0';
-  const message = `Dear ${data.name}, your meter balance is low (₦${balance}). Please recharge soon to avoid power disconnection. Meter: ${data.meterId}. Recharge at armogridsolar.vercel.app`;
+  const message = `Dear ${data.name}, your meter balance is low (NGN ${balance}). Please recharge soon to avoid power disconnection. Meter: ${data.meterId}. Recharge at armogridsolar.vercel.app`;
   
   const result = await sendSms(data.phone, message, 'low_credit');
   return result.success;
@@ -544,7 +544,7 @@ export async function sendLowCreditSms(data: CustomerNotificationData): Promise<
 export async function sendAccountCreditedSms(data: CustomerNotificationData): Promise<boolean> {
   const amount = data.amount?.toLocaleString() || '0';
   const balance = data.balance?.toLocaleString() || '0';
-  const message = `ArmogridSolar: Your account has been credited with ₦${amount}. New balance: ₦${balance}. Reference: ${data.reference || 'N/A'}. Thank you!`;
+  const message = `ArmogridSolar: Your account has been credited with NGN ${amount}. New balance: NGN ${balance}. Reference: ${data.reference || 'N/A'}. Thank you!`;
   
   const result = await sendSms(data.phone, message, 'account_credited');
   return result.success;
@@ -555,7 +555,7 @@ export async function sendAccountCreditedSms(data: CustomerNotificationData): Pr
  */
 export async function sendPaymentSuccessSms(data: CustomerNotificationData): Promise<boolean> {
   const amount = data.amount?.toLocaleString() || '0';
-  const message = `Payment Successful! ₦${amount} received for meter ${data.meterId || data.roomNumber || 'N/A'}. Ref: ${data.reference || 'N/A'}. ArmogridSolar`;
+  const message = `Payment Successful! NGN ${amount} received for meter ${data.meterId || data.roomNumber || 'N/A'}. Ref: ${data.reference || 'N/A'}. ArmogridSolar`;
   
   const result = await sendSms(data.phone, message, 'payment_success');
   return result.success;
@@ -566,7 +566,7 @@ export async function sendPaymentSuccessSms(data: CustomerNotificationData): Pro
  */
 export async function sendPaymentFailedSms(data: CustomerNotificationData): Promise<boolean> {
   const amount = data.amount?.toLocaleString() || '0';
-  const message = `Payment of ₦${amount} failed for meter ${data.meterId || data.roomNumber || 'N/A'}. Please try again. Ref: ${data.reference || 'N/A'}. ArmogridSolar`;
+  const message = `Payment of NGN ${amount} failed for meter ${data.meterId || data.roomNumber || 'N/A'}. Please try again. Ref: ${data.reference || 'N/A'}. ArmogridSolar`;
   
   const result = await sendSms(data.phone, message, 'payment_failed');
   return result.success;
@@ -614,7 +614,7 @@ export async function sendMeterOfflineAlert(data: AdminAlertData): Promise<boole
     return false;
   }
 
-  const message = `⚠️ METER OFFLINE ALERT\nMeter: ${data.meterId || 'Unknown'}\nRoom: ${data.roomNumber || 'N/A'}\nProject: ${data.projectName || 'N/A'}\n${data.details || ''}`.trim();
+  const message = `ALERT: METER OFFLINE - Meter: ${data.meterId || 'Unknown'}, Room: ${data.roomNumber || 'N/A'}, Project: ${data.projectName || 'N/A'}${data.details ? ', ' + data.details : ''}`.trim();
   
   let allSent = true;
   for (const phone of adminPhones) {
@@ -635,7 +635,7 @@ export async function sendMeterOnlineAlert(data: AdminAlertData): Promise<boolea
     return false;
   }
 
-  const message = `✅ METER ONLINE\nMeter: ${data.meterId || 'Unknown'}\nRoom: ${data.roomNumber || 'N/A'}\nProject: ${data.projectName || 'N/A'}\nMeter is back online.`;
+  const message = `METER ONLINE - Meter: ${data.meterId || 'Unknown'}, Room: ${data.roomNumber || 'N/A'}, Project: ${data.projectName || 'N/A'}. Meter is back online.`;
   
   let allSent = true;
   for (const phone of adminPhones) {
@@ -656,7 +656,7 @@ export async function sendBulkOfflineAlert(meterCount: number, projectName?: str
     return false;
   }
 
-  const message = `⚠️ BULK OFFLINE ALERT\n${meterCount} meters are offline${projectName ? ` in ${projectName}` : ''}. Please check the admin dashboard for details.`;
+  const message = `ALERT: ${meterCount} meters are offline${projectName ? ` in ${projectName}` : ''}. Please check the admin dashboard for details.`;
   
   let allSent = true;
   for (const phone of adminPhones) {
@@ -699,7 +699,7 @@ export async function sendRegistrationAlertToAdmin(data: {
     return false;
   }
 
-  const message = `🆕 NEW REGISTRATION\nName: ${data.name}\nPhone: ${data.phone}\nEmail: ${data.email}\nRoom: ${data.roomNumber}\nLocation: ${data.locationName || 'N/A'}\nMeter: FREE`;
+  const message = `NEW REGISTRATION - Name: ${data.name}, Phone: ${data.phone}, Email: ${data.email}, Room: ${data.roomNumber}, Location: ${data.locationName || 'N/A'}, Meter: FREE`;
   
   let allSent = true;
   for (const phone of adminPhones) {

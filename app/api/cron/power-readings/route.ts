@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAdminToken, getUserToken } from '@/lib/auth';
+import { getAdminToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
@@ -26,13 +26,39 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'No admin token' }, { status: 500 });
     }
 
-    // Get user token for getMeterInfo API (admin token doesn't work for this)
-    let userToken: string;
+    // Load per-meter credentials from Supabase
+    const credentialsMap = new Map<string, string>(); // roomNo -> iot_token
     try {
-      userToken = await getUserToken();
+      const { data: allCreds } = await supabaseAdmin
+        .from('meter_credentials')
+        .select('room_no, iot_token, token_expires_at, username, password_hash');
+
+      if (allCreds) {
+        for (const cred of allCreds) {
+          let token = cred.iot_token;
+          const tokenExpired = !cred.token_expires_at || new Date(cred.token_expires_at) < new Date();
+          if (tokenExpired && cred.username && cred.password_hash) {
+            try {
+              const loginResp = await iotClient.login(cred.username, cred.password_hash, 1);
+              if ((loginResp.success === '1' || loginResp.code === 200) && loginResp.data) {
+                token = loginResp.data;
+                const tokenExpiresAt = new Date();
+                tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);
+                await supabaseAdmin
+                  .from('meter_credentials')
+                  .update({ iot_token: token, token_expires_at: tokenExpiresAt.toISOString() })
+                  .eq('room_no', cred.room_no);
+              }
+            } catch (e) {
+              console.error(`[Cron] Failed to refresh token for ${cred.room_no}:`, e);
+            }
+          }
+          if (token) credentialsMap.set(cred.room_no, token);
+        }
+        console.log(`[Cron] Loaded ${credentialsMap.size} per-meter tokens from meter_credentials`);
+      }
     } catch (e) {
-      console.error('[Cron] Failed to get user token, falling back to admin token');
-      userToken = adminToken;
+      console.error('[Cron] Failed to load meter credentials:', e);
     }
 
     // Fetch all projects
@@ -68,9 +94,15 @@ export async function GET(request: NextRequest) {
         for (const room of rooms) {
           const roomNo = room.name || room.roomNo || '';
           if (!roomNo) continue;
+
+          const meterToken = credentialsMap.get(roomNo);
+          if (!meterToken) {
+            // No credential stored for this room — skip getMeterInfo
+            continue;
+          }
           
           try {
-            const meterInfoResponse = await iotClient.getMeterInfo(roomNo, userToken);
+            const meterInfoResponse = await iotClient.getMeterInfo(roomNo, meterToken);
             const meterSuccess = meterInfoResponse.success === '1' || 
                                 meterInfoResponse.code === 200 || 
                                 meterInfoResponse.code === 0;

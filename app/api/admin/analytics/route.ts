@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAdmin, getAdminToken, getUserToken } from '@/lib/auth';
+import { requireAdmin, getAdminToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
@@ -48,7 +48,8 @@ function processMeterFromList(
   userToken: string,
   adminToken: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  credentialsMap?: Map<string, string> // roomNo -> iot_token
 ): { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any>; powerPromise: Promise<any> } {
   const meterId = String(meter.id || '');
   const roomNo = meter.roomNo || meter.meterName || meter.meterSn || '';
@@ -87,9 +88,11 @@ function processMeterFromList(
     ? iotClient.getMeterEnergyDay(meterId, `${startDate} 00:00:00`, `${endDate} 23:59:59`, adminToken).catch(() => null)
     : Promise.resolve(null);
   
-  // Fetch live power from getMeterInfo only for online meters (offline meters won't have power)
-  const powerPromise = isOnline && roomNo
-    ? iotClient.getMeterInfo(roomNo, userToken).catch(() => null)
+  // Fetch live power from getMeterInfo only for online meters that have a stored credential
+  // No fallback to a shared user token — only individually linked meters contribute live power
+  const meterToken = credentialsMap && roomNo ? credentialsMap.get(roomNo) : undefined;
+  const powerPromise = isOnline && roomNo && meterToken
+    ? iotClient.getMeterInfo(roomNo, meterToken).catch(() => null)
     : Promise.resolve(null);
 
   return { meterInfo, salesPromise, energyPromise, powerPromise };
@@ -120,15 +123,6 @@ export async function GET(request: NextRequest) {
     console.log(`[Analytics] Fetching live data from ${startDate} to ${endDate}`);
     const startTime = Date.now();
 
-    // Get user token for APIs that require user authentication
-    let userToken: string;
-    try {
-      userToken = await getUserToken();
-    } catch (e) {
-      console.error('[Analytics] Failed to get user token, falling back to admin token');
-      userToken = adminToken;
-    }
-
     // Step 1: Fetch all projects
     const projectsResponse = await iotClient.getProjectList('', 100, 1, adminToken);
     if (projectsResponse.success !== '1') {
@@ -146,12 +140,12 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Analytics] Processing ${projects.length} projects`);
 
-    // Step 2: Fetch all meters for all projects using appProjectMeterList (more reliable)
+    // Step 2: Fetch all meters for all projects using appProjectMeterList with admin token
     const projectMeterPromises = projects.map(async (project: any) => {
       const projectId = String(project.id);
       const projectName = project.projectName || 'Unknown';
       try {
-        const meterListResponse = await iotClient.getProjectMeterList(projectId, userToken);
+        const meterListResponse = await iotClient.getProjectMeterList(projectId, adminToken);
         if (meterListResponse.success === '1' && meterListResponse.data?.list) {
           return { projectId, projectName, meters: meterListResponse.data.list };
         }
@@ -171,13 +165,49 @@ export async function GET(request: NextRequest) {
     }
     console.log(`[Analytics] Total meters to process: ${totalMeterCount}`);
     
+    // Load all meter credentials from Supabase to use per-meter tokens for getMeterInfo
+    const credentialsMap = new Map<string, string>(); // roomNo -> iot_token
+    try {
+      const { data: allCreds } = await supabaseAdmin
+        .from('meter_credentials')
+        .select('room_no, iot_token, token_expires_at, username, password_hash');
+
+      if (allCreds) {
+        for (const cred of allCreds) {
+          let token = cred.iot_token;
+          // Refresh token if expired
+          const tokenExpired = !cred.token_expires_at || new Date(cred.token_expires_at) < new Date();
+          if (tokenExpired && cred.username && cred.password_hash) {
+            try {
+              const loginResp = await iotClient.login(cred.username, cred.password_hash, 1);
+              if ((loginResp.success === '1' || loginResp.code === 200) && loginResp.data) {
+                token = loginResp.data;
+                const tokenExpiresAt = new Date();
+                tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);
+                await supabaseAdmin
+                  .from('meter_credentials')
+                  .update({ iot_token: token, token_expires_at: tokenExpiresAt.toISOString() })
+                  .eq('room_no', cred.room_no);
+              }
+            } catch (e) {
+              console.error(`[Analytics] Failed to refresh token for ${cred.room_no}:`, e);
+            }
+          }
+          if (token) credentialsMap.set(cred.room_no, token);
+        }
+        console.log(`[Analytics] Loaded ${credentialsMap.size} per-meter tokens from meter_credentials`);
+      }
+    } catch (e) {
+      console.error('[Analytics] Failed to load meter credentials, falling back to global userToken:', e);
+    }
+
     // Step 3: Process all meters - extract info and create promises for additional data
     const meterResults: any[] = [];
     const meterPromises: { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any>; powerPromise: Promise<any> }[] = [];
     
     for (const { meters } of projectMeters) {
       for (const meter of meters) {
-        const processed = processMeterFromList(meter, userToken, adminToken, startDate, endDate);
+        const processed = processMeterFromList(meter, '', adminToken, startDate, endDate, credentialsMap);
         meterPromises.push(processed);
         meterResults.push(processed.meterInfo);
       }
