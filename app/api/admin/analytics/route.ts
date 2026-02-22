@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
 import { iotClient } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
-import { loadMeterCredentials } from '@/lib/meter-credentials';
 
 interface MeterStatus {
   normal: number;
@@ -50,7 +49,6 @@ function processMeterFromList(
   adminToken: string,
   startDate: string,
   endDate: string,
-  credentialsMap?: Map<string, string> // roomNo -> iot_token
 ): { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any>; powerPromise: Promise<any> } {
   const meterId = String(meter.id || '');
   const roomNo = meter.roomNo || meter.meterName || meter.meterSn || '';
@@ -71,7 +69,7 @@ function processMeterFromList(
     projectId,
     projectName,
     balance,
-    power: 0, // Will be updated from getMeterInfo for online meters
+    power: 0, // Will be updated from getMeterInfoById for online meters
     alarmA,
     isOnline,
     isAlarm,
@@ -89,11 +87,11 @@ function processMeterFromList(
     ? iotClient.getMeterEnergyDay(meterId, `${startDate} 00:00:00`, `${endDate} 23:59:59`, adminToken).catch(() => null)
     : Promise.resolve(null);
   
-  // Fetch live power from getMeterInfo only for online meters that have a stored credential
-  // No fallback to a shared user token — only individually linked meters contribute live power
-  const meterToken = credentialsMap && roomNo ? credentialsMap.get(roomNo) : undefined;
-  const powerPromise = isOnline && roomNo && meterToken
-    ? iotClient.getMeterInfo(roomNo, meterToken).catch(() => null)
+  // Fetch live power using getMeterInfoById with admin token.
+  // The /MeterInfo endpoint accepts the admin token and returns the live `p` field
+  // for all meters, eliminating the need for per-meter user credentials.
+  const powerPromise = isOnline && meterId
+    ? iotClient.getMeterInfoById(meterId, adminToken).catch(() => null)
     : Promise.resolve(null);
 
   return { meterInfo, salesPromise, energyPromise, powerPromise };
@@ -166,16 +164,13 @@ export async function GET(request: NextRequest) {
     }
     console.log(`[Analytics] Total meters to process: ${totalMeterCount}`);
     
-    const credentialsMap = await loadMeterCredentials();
-    console.log(`[Analytics] Loaded ${credentialsMap.size} per-meter tokens from meter_credentials`);
-
     // Step 3: Process all meters - extract info and create promises for additional data
     const meterResults: any[] = [];
     const meterPromises: { meterInfo: any; salesPromise: Promise<any>; energyPromise: Promise<any>; powerPromise: Promise<any> }[] = [];
     
     for (const { meters } of projectMeters) {
       for (const meter of meters) {
-        const processed = processMeterFromList(meter, '', adminToken, startDate, endDate, credentialsMap);
+        const processed = processMeterFromList(meter, '', adminToken, startDate, endDate);
         meterPromises.push(processed);
         meterResults.push(processed.meterInfo);
       }
