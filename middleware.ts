@@ -13,6 +13,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/payment/verify',
   '/api/payment/config',
   '/api/webhook/',
+  '/api/webhooks/',
   '/api/projects',
   '/api/signup',
   '/api/cron/',
