@@ -53,7 +53,7 @@ export function generateSaleId(): string {
  * Meter IDs are numeric strings between 4 and 20 digits
  */
 export function isValidMeterId(meterId: string): boolean {
-  return /^\d{4,20}$/.test(meterId);
+  return /^\d{1,20}$/.test(meterId);
 }
 
 /**

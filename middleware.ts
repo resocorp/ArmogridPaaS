@@ -16,6 +16,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/projects',
   '/api/signup',
   '/api/cron/',
+  '/api/meters/validate',
 ];
 
 const PUBLIC_PATHS = new Set(PUBLIC_ROUTES);
