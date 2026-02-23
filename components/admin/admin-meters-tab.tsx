@@ -240,7 +240,7 @@ export function AdminMetersTab({ projects, projectsLoading, onLoadProjects }: Ad
                         </TableCell>
                         <TableCell className="text-sm">{meter.projectName || '-'}</TableCell>
                         <TableCell className="font-mono text-xs">{meter.meterId || '-'}</TableCell>
-                        <TableCell>{displayBalance && parseFloat(displayBalance) > 0 ? <span className="text-green-600 font-medium">₦{parseFloat(displayBalance).toLocaleString()}</span> : <span className="text-muted-foreground">₦0</span>}</TableCell>
+                        <TableCell>{(() => { const bal = parseFloat(displayBalance || '0'); if (bal > 0) return <span className="text-green-600 font-medium">₦{bal.toLocaleString()}</span>; if (bal < 0) return <span className="text-red-600 font-medium">-₦{Math.abs(bal).toLocaleString()}</span>; return <span className="text-muted-foreground">₦0</span>; })()}</TableCell>
                         <TableCell className="text-sm">{displayReading ? `${parseFloat(displayReading).toFixed(2)} kWh` : '-'}</TableCell>
                         <TableCell>{getMeterStatusBadge(displayStatus)}</TableCell>
                         <TableCell className="text-right">
@@ -351,7 +351,7 @@ export function AdminMetersTab({ projects, projectsLoading, onLoadProjects }: Ad
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 border rounded-lg"><p className="text-xs text-muted-foreground">Total Energy</p><p className="font-mono text-lg font-bold text-primary">{detailsMeter.epi ? `${parseFloat(detailsMeter.epi).toFixed(2)} kWh` : '-- kWh'}</p></div>
-                <div className="p-3 border rounded-lg"><p className="text-xs text-muted-foreground">Balance</p><p className="font-mono text-lg font-bold text-green-600">₦{detailsMeter.balance ? parseFloat(detailsMeter.balance).toLocaleString() : '0'}</p></div>
+                <div className="p-3 border rounded-lg"><p className="text-xs text-muted-foreground">Balance</p><p className={`font-mono text-lg font-bold ${detailsMeter.balance && parseFloat(detailsMeter.balance) < 0 ? 'text-red-600' : 'text-green-600'}`}>{detailsMeter.balance && parseFloat(detailsMeter.balance) < 0 ? `-₦${Math.abs(parseFloat(detailsMeter.balance)).toLocaleString()}` : `₦${detailsMeter.balance ? parseFloat(detailsMeter.balance).toLocaleString() : '0'}`}</p></div>
               </div>
               <div className="p-3 border rounded-lg">
                 <p className="text-sm font-medium text-muted-foreground mb-2">Energy Price (₦/kWh)</p>
