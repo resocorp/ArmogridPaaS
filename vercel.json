@@ -1,12 +1,16 @@
 {
   "crons": [
     {
-      "path": "/api/cron/low-credit-alerts",
-      "schedule": "0 8 * * *"
+      "path": "/api/cron/power-readings",
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/monitor-meters",
-      "schedule": "0 9 * * *"
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/low-credit-alerts",
+      "schedule": "0 8 * * *"
     }
   ]
 }

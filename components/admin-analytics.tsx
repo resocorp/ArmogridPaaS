@@ -40,6 +40,7 @@ import {
   Pie,
   Cell,
   Legend,
+  Brush,
 } from 'recharts';
 import { format, subDays, subHours, subMonths, startOfMonth, endOfMonth, startOfDay, endOfDay } from 'date-fns';
 
@@ -93,6 +94,14 @@ export function AdminAnalytics() {
   const [customStartDate, setCustomStartDate] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [customEndDate, setCustomEndDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
+
+  // Per-chart independent state
+  type PowerRange = '3h' | '6h' | '12h' | '24h' | '3d' | '7d';
+  const [powerChartRange, setPowerChartRange] = useState<PowerRange>('24h');
+  const [powerHistory, setPowerHistory] = useState<{ timestamp: string; power: number; activeMeters: number }[]>([]);
+  const [isPowerLoading, setIsPowerLoading] = useState(false);
+  const [revenueChartDays, setRevenueChartDays] = useState<number>(0); // 0 = show all
+  const [energyChartDays, setEnergyChartDays] = useState<number>(0); // 0 = show all
 
   const getDateRange = (range: DateRange): { start: string; end: string } => {
     const now = new Date();
@@ -157,6 +166,49 @@ export function AdminAnalytics() {
   const applyCustomDateRange = () => {
     setShowCustomDatePicker(false);
     loadAnalytics();
+  };
+
+  // Load power history for the dedicated power chart (independent of main date range)
+  const loadPowerHistory = async (range: PowerRange) => {
+    try {
+      setIsPowerLoading(true);
+      const now = new Date();
+      let cutoffDate: Date;
+      switch (range) {
+        case '3h': cutoffDate = subHours(now, 3); break;
+        case '6h': cutoffDate = subHours(now, 6); break;
+        case '12h': cutoffDate = subHours(now, 12); break;
+        case '24h': cutoffDate = subHours(now, 24); break;
+        case '3d': cutoffDate = subDays(now, 3); break;
+        case '7d': cutoffDate = subDays(now, 7); break;
+        default: cutoffDate = subHours(now, 24);
+      }
+      const startStr = format(cutoffDate, 'yyyy-MM-dd');
+      const endStr = format(now, 'yyyy-MM-dd');
+      const maxPoints = range === '7d' ? 2500 : range === '3d' ? 1200 : 600;
+      const response = await fetch(`/api/admin/power-readings?startDate=${startStr}&endDate=${endStr}&limit=${maxPoints}`);
+      const data = await response.json();
+      if (data.success) {
+        const cutoffIso = cutoffDate.toISOString();
+        const filtered = (data.data || []).filter((r: any) => r.recorded_at >= cutoffIso);
+        setPowerHistory(filtered.map((r: any) => ({
+          timestamp: r.recorded_at,
+          power: parseFloat(r.total_power) || 0,
+          activeMeters: r.active_meters || 0,
+        })));
+      }
+    } catch (e) {
+      console.error('Failed to load power history:', e);
+    } finally {
+      setIsPowerLoading(false);
+    }
+  };
+
+  // Filter chart data to last N days (client-side zoom within loaded data)
+  const getFilteredByDays = <T extends { date: string }>(data: T[], days: number): T[] => {
+    if (days === 0) return data;
+    const cutoff = format(subDays(new Date(), days), 'yyyy-MM-dd');
+    return data.filter(d => d.date >= cutoff);
   };
 
   // Load available projects from IoT API
@@ -226,6 +278,7 @@ export function AdminAnalytics() {
 
   useEffect(() => {
     loadProjects();
+    loadPowerHistory('24h');
   }, []);
 
   useEffect(() => {
@@ -240,6 +293,11 @@ export function AdminAnalytics() {
       loadAnalytics();
     }
   }, [customStartDate, customEndDate]);
+
+  // Reload power history when its range changes
+  useEffect(() => {
+    loadPowerHistory(powerChartRange);
+  }, [powerChartRange]);
 
   if (isLoading) {
     return (
@@ -615,16 +673,25 @@ export function AdminAnalytics() {
         {/* Revenue Over Time */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-green-500" />
-              Revenue Trend
-            </CardTitle>
-            <CardDescription>Daily revenue over selected period</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-green-500" />
+                  Revenue Trend
+                </CardTitle>
+                <CardDescription>Daily revenue over selected period</CardDescription>
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
+                {([{label:'7d',value:7},{label:'14d',value:14},{label:'30d',value:30},{label:'All',value:0}] as {label:string;value:number}[]).map(opt => (
+                  <Button key={opt.value} variant={revenueChartDays===opt.value?'default':'outline'} size="sm" className="h-7 px-2 text-xs" onClick={() => setRevenueChartDays(opt.value)}>{opt.label}</Button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {analytics.revenueByDay.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={analytics.revenueByDay}>
+                <AreaChart data={getFilteredByDays(analytics.revenueByDay, revenueChartDays)}>
                   <defs>
                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
@@ -665,16 +732,25 @@ export function AdminAnalytics() {
         {/* Energy Consumption */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Zap className="w-5 h-5 text-blue-500" />
-              Energy Consumption
-            </CardTitle>
-            <CardDescription>Daily energy usage (kWh)</CardDescription>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Zap className="w-5 h-5 text-blue-500" />
+                  Energy Consumption
+                </CardTitle>
+                <CardDescription>Daily energy usage (kWh)</CardDescription>
+              </div>
+              <div className="flex gap-1 flex-shrink-0">
+                {([{label:'7d',value:7},{label:'14d',value:14},{label:'30d',value:30},{label:'All',value:0}] as {label:string;value:number}[]).map(opt => (
+                  <Button key={opt.value} variant={energyChartDays===opt.value?'default':'outline'} size="sm" className="h-7 px-2 text-xs" onClick={() => setEnergyChartDays(opt.value)}>{opt.label}</Button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {analytics.energyByDay.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={analytics.energyByDay}>
+                <BarChart data={getFilteredByDays(analytics.energyByDay, energyChartDays)}>
                   <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                   <XAxis 
                     dataKey="date" 
@@ -704,18 +780,47 @@ export function AdminAnalytics() {
       {/* Live Power History */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Activity className="w-5 h-5 text-orange-500" />
-            Live Power Over Time
-          </CardTitle>
-          <CardDescription>
-            Power draw recorded over time (kW) - Updates on each refresh
-          </CardDescription>
+          <div className="flex items-start justify-between gap-2 flex-wrap">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Activity className="w-5 h-5 text-orange-500" />
+                Live Power Over Time
+              </CardTitle>
+              <CardDescription>
+                Power draw at 5-min resolution (kW){isPowerLoading ? ' — Loading...' : ` — ${powerHistory.length} data points`}
+              </CardDescription>
+            </div>
+            <div className="flex gap-1 flex-wrap">
+              {([
+                {label:'3h',value:'3h'},{label:'6h',value:'6h'},{label:'12h',value:'12h'},
+                {label:'24h',value:'24h'},{label:'3 Days',value:'3d'},{label:'7 Days',value:'7d'},
+              ] as {label:string;value:PowerRange}[]).map(opt => (
+                <Button
+                  key={opt.value}
+                  variant={powerChartRange===opt.value?'default':'outline'}
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => setPowerChartRange(opt.value)}
+                >
+                  {opt.label}
+                </Button>
+              ))}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={() => loadPowerHistory(powerChartRange)}
+                disabled={isPowerLoading}
+              >
+                <RefreshCw className={`w-3 h-3 ${isPowerLoading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {analytics.powerHistory && analytics.powerHistory.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <AreaChart data={analytics.powerHistory}>
+          {powerHistory.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={powerHistory}>
                 <defs>
                   <linearGradient id="colorPower" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="5%" stopColor="#f97316" stopOpacity={0.8}/>
@@ -723,33 +828,46 @@ export function AdminAnalytics() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                <XAxis 
-                  dataKey="timestamp" 
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v) => format(new Date(v), 'MMM d HH:mm')}
+                <XAxis
+                  dataKey="timestamp"
+                  tick={{ fontSize: 11 }}
+                  tickFormatter={(v) => format(new Date(v), powerChartRange === '3h' || powerChartRange === '6h' ? 'HH:mm' : 'MMM d HH:mm')}
+                  minTickGap={40}
                 />
-                <YAxis 
+                <YAxis
                   tick={{ fontSize: 12 }}
                   tickFormatter={(v) => `${v.toFixed(2)} kW`}
                 />
-                <Tooltip 
+                <Tooltip
                   formatter={(value: number) => [formatPower(value), 'Power']}
                   labelFormatter={(label) => format(new Date(label), 'PPP p')}
                 />
-                <Area 
-                  type="monotone" 
-                  dataKey="power" 
-                  stroke="#f97316" 
-                  fillOpacity={1} 
-                  fill="url(#colorPower)" 
+                <Area
+                  type="monotone"
+                  dataKey="power"
+                  stroke="#f97316"
+                  fillOpacity={1}
+                  fill="url(#colorPower)"
+                  dot={false}
+                  isAnimationActive={false}
+                />
+                <Brush
+                  dataKey="timestamp"
+                  height={28}
+                  stroke="#f97316"
+                  fill="#fff7ed"
+                  tickFormatter={(v) => format(new Date(v), 'HH:mm')}
+                  travellerWidth={8}
                 />
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex flex-col items-center justify-center h-[250px] text-muted-foreground">
+            <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
               <Activity className="w-12 h-12 mb-2 opacity-50" />
-              <p>No power history data yet</p>
-              <p className="text-sm mt-1">Power readings are recorded each time you refresh the dashboard</p>
+              <p>{isPowerLoading ? 'Loading power history...' : 'No power history for this period'}</p>
+              <p className="text-sm mt-1">
+                {!isPowerLoading && 'Power readings are saved every 5 minutes by the cron worker'}
+              </p>
             </div>
           )}
         </CardContent>

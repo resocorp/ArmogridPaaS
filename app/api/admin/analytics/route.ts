@@ -244,13 +244,11 @@ export async function GET(request: NextRequest) {
     for (const meter of meterResults) {
       analytics.meterStatus.total++;
 
+      // Track status - offline meters still have historical revenue/energy data
       if (meter.status === 'offline') {
         analytics.meterStatus.offline++;
         analytics.offlineMeters.push({ roomNo: meter.roomNo, meterId: meter.meterId });
-        continue;
-      }
-
-      if (meter.status === 'alarm') {
+      } else if (meter.status === 'alarm') {
         analytics.meterStatus.alarm++;
         analytics.lowBalanceMeters.push({
           roomNo: meter.roomNo,
@@ -262,7 +260,7 @@ export async function GET(request: NextRequest) {
         analytics.meterStatus.normal++;
       }
 
-      // Track live power
+      // Track live power (online meters only)
       if (meter.isOnline && meter.power > 0) {
         analytics.livePower += meter.power;
         analytics.livePowerByMeter.push({
@@ -273,8 +271,8 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // Check for forced mode
-      if (meter.controlMode === '1' || meter.controlMode === '2') {
+      // Check for forced mode (non-offline meters only)
+      if (meter.status !== 'offline' && (meter.controlMode === '1' || meter.controlMode === '2')) {
         analytics.forcedModeMeters.push({
           roomNo: meter.roomNo,
           controlMode: meter.switchSta === '1' ? 'forced_on' : 'forced_off',
@@ -282,7 +280,7 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // Process sales data
+      // Process sales data - historical data available for ALL meters including offline
       if (meter.sales && (meter.sales as any).success === '1' && meter.sales.data) {
         for (const sale of meter.sales.data) {
           const amount = parseFloat(sale.saleMoney || sale.money || '0');
@@ -302,7 +300,7 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Process energy data
+      // Process energy data - historical data available for ALL meters including offline
       if (meter.energy && meter.energy.success === '1' && meter.energy.data) {
         let meterTotalEnergy = 0;
         for (const record of meter.energy.data) {
@@ -362,7 +360,7 @@ export async function GET(request: NextRequest) {
         .gte('recorded_at', `${startDate}T00:00:00`)
         .lte('recorded_at', `${endDate}T23:59:59`)
         .order('recorded_at', { ascending: true })
-        .limit(500);
+        .limit(2000);
 
       if (powerReadings) {
         analytics.powerHistory = powerReadings.map((r: any) => ({
