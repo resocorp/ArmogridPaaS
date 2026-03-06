@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature } from '@/lib/paystack';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateSaleId, translateErrorMessage } from '@/lib/utils';
 import { BUY_TYPE } from '@/lib/constants';
 import { notifyAdminOfRegistration } from '@/lib/notifications';
-import { sendWelcomeSms, sendPaymentSuccessSms, sendPaymentFailedSms } from '@/lib/sms';
+import { sendWelcomeSms, sendPaymentSuccessSms } from '@/lib/sms';
 import type { PaystackWebhookEvent } from '@/types/payment';
 
 export async function POST(request: NextRequest) {
@@ -116,12 +116,7 @@ export async function POST(request: NextRequest) {
         );
         console.log('[Webhook] SalePower response:', JSON.stringify(saleResponse));
 
-        // Check success in both API formats
-        const isSuccess = 
-          (saleResponse.success === '1') || // New format
-          (saleResponse.code === 200 || saleResponse.code === 0); // Legacy format
-
-        if (isSuccess) {
+        if (isIotSuccess(saleResponse)) {
           console.log('[Webhook] Meter credited successfully, updating database...');
           // Update transaction as successful
           await supabaseAdmin

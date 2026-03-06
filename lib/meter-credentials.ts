@@ -1,5 +1,5 @@
 import { supabaseAdmin } from './supabase';
-import { iotClient } from './iot-client';
+import { iotClient, isIotSuccess } from './iot-client';
 
 /**
  * Loads all meter credentials from Supabase, refreshing expired tokens as needed.
@@ -25,7 +25,7 @@ export async function loadMeterCredentials(): Promise<Map<string, string>> {
     if (tokenExpired && cred.username && cred.password_hash) {
       try {
         const loginResp = await iotClient.login(cred.username, cred.password_hash, 1);
-        if ((loginResp.success === '1' || loginResp.code === 200) && loginResp.data) {
+        if (isIotSuccess(loginResp) && loginResp.data) {
           token = loginResp.data;
           const tokenExpiresAt = new Date();
           tokenExpiresAt.setHours(tokenExpiresAt.getHours() + 24);

@@ -154,7 +154,7 @@ export async function getAdminToken(): Promise<string> {
   if (session?.userType === 0) return session.token;
 
   // Fall back to logging in with admin credentials
-  const { iotClient } = await import('./iot-client');
+  const { iotClient, isIotSuccess } = await import('./iot-client');
   const username = process.env.IOT_ADMIN_USERNAME;
   const password = process.env.IOT_ADMIN_PASSWORD;
 
@@ -164,17 +164,9 @@ export async function getAdminToken(): Promise<string> {
 
   const response = await iotClient.login(username, password, 0);
 
-  // Handle new API format (success/errorCode/errorMsg)
-  if (response.success !== undefined) {
-    if (response.success === '1' && response.data) return response.data;
-    throw new Error(`Failed to get admin token: ${response.errorMsg || 'Unknown error'}`);
+  if (isIotSuccess(response) && response.data) {
+    return response.data;
   }
 
-  // Handle legacy API format (code/msg)
-  if (response.code !== undefined) {
-    if ((response.code === 200 || response.code === 0) && response.data) return response.data;
-    throw new Error(`Failed to get admin token: ${response.msg || 'Unknown error'}`);
-  }
-
-  throw new Error('Failed to get admin token: Unexpected response format');
+  throw new Error(`Failed to get admin token: ${response.errorMsg || response.msg || 'Unknown error'}`);
 }

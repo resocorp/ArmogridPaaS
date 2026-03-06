@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
-import { format, subDays, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 export async function GET() {
   try {
@@ -30,7 +30,7 @@ export async function GET() {
     let totalMeters = 0;
     let totalProjects = 0;
 
-    if (projectsResponse.code === 200 || projectsResponse.code === 0) {
+    if (isIotSuccess(projectsResponse)) {
       totalProjects = projectsResponse.data?.total || projectsResponse.data?.list?.length || 0;
       // Sum up meters from all projects
       for (const project of projectsResponse.data?.list || []) {

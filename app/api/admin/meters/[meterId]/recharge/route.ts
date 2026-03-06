@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export async function POST(
@@ -39,42 +39,8 @@ export async function POST(
       adminToken
     );
 
-    // Handle new API format
-    if (response.success !== undefined) {
-      if (response.success === '1') {
-        // Log the manual recharge in Supabase
-        await supabaseAdmin.from('transactions').insert({
-          meter_id: meterId,
-          amount_kobo: amountKobo,
-          paystack_reference: saleId,
-          paystack_status: 'success',
-          sale_id: saleId,
-          buy_type: 0,
-          user_id: session.userId,
-          metadata: {
-            type: 'admin_manual_recharge',
-            admin_username: session.username,
-            note: note || 'Manual admin recharge',
-          },
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: `Successfully credited ₦${amount.toLocaleString()} to meter`,
-          saleId,
-          newBalance: response.data?.balance,
-        });
-      } else {
-        return NextResponse.json(
-          { error: response.errorMsg || 'Failed to recharge meter' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Handle legacy format
-    if (response.code === 200 || response.code === 0) {
-      // Log the manual recharge
+    if (isIotSuccess(response)) {
+      // Log the manual recharge in Supabase
       await supabaseAdmin.from('transactions').insert({
         meter_id: meterId,
         amount_kobo: amountKobo,
@@ -99,7 +65,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { error: response.msg || 'Failed to recharge meter' },
+      { error: response.errorMsg || response.msg || 'Failed to recharge meter' },
       { status: 400 }
     );
   } catch (error: any) {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializePayment, generatePaymentReference, calculatePaystackFee } from '@/lib/paystack';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { nairaToKobo, isValidMeterId, translateErrorMessage } from '@/lib/utils';
@@ -52,12 +52,7 @@ export async function POST(request: NextRequest) {
       const meterInfo = await iotClient.getMeterInfoById(meterId, adminToken);
       console.log('[Payment Init] Meter info response:', JSON.stringify(meterInfo));
       
-      // Check if the response indicates success (handle both API formats)
-      const isSuccess = 
-        (meterInfo.success === '1') || // New format
-        (meterInfo.code === 200 || meterInfo.code === 0); // Legacy format
-      
-      if (!isSuccess) {
+      if (!isIotSuccess(meterInfo)) {
         const rawErrorMsg = meterInfo.errorMsg || meterInfo.msg || 'Unknown error';
         const errorMsg = translateErrorMessage(rawErrorMsg);
         console.error('[Payment Init] Meter lookup failed:', rawErrorMsg, '-> Translated:', errorMsg);

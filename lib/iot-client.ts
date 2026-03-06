@@ -425,6 +425,18 @@ class IotClient {
   }
 }
 
+/**
+ * Check if an IoT API response indicates success.
+ * Handles both the new format (success: '1') and the legacy format (code: 200 | 0).
+ */
+export function isIotSuccess(response: { success?: string; code?: number }): boolean {
+  return (
+    response.success === '1' ||
+    response.code === 200 ||
+    response.code === 0
+  );
+}
+
 // Export singleton instance
 export const iotClient = new IotClient();
 

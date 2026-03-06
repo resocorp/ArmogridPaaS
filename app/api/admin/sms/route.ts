@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, loadAdminSettings } from '@/lib/supabase';
 import { testSmsConfig, getSmsConfig, sendSms } from '@/lib/sms';
 
 export const dynamic = 'force-dynamic';
@@ -85,24 +85,16 @@ export async function GET(request: NextRequest) {
     const config = await getSmsConfig();
     
     // Get additional settings
-    const { data: settings } = await supabaseAdmin
-      .from('admin_settings')
-      .select('key, value')
-      .in('key', [
-        'admin_phone',
-        'admin_phone_2',
-        'admin_phone_3',
-        'low_credit_threshold',
-        'sms_welcome_enabled',
-        'sms_payment_enabled',
-        'sms_low_credit_enabled',
-        'sms_meter_offline_enabled',
-      ]);
-
-    const allSettings: Record<string, string> = {};
-    settings?.forEach((s: any) => {
-      allSettings[s.key] = s.value;
-    });
+    const allSettings = await loadAdminSettings([
+      'admin_phone',
+      'admin_phone_2',
+      'admin_phone_3',
+      'low_credit_threshold',
+      'sms_welcome_enabled',
+      'sms_payment_enabled',
+      'sms_low_credit_enabled',
+      'sms_meter_offline_enabled',
+    ]);
 
     return NextResponse.json({
       success: true,

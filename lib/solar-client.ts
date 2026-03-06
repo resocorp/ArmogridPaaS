@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabase';
+import { supabaseAdmin, loadAdminSettings } from './supabase';
 
 // =============================================================================
 // TYPES
@@ -289,7 +289,7 @@ class SolarClient {
     return {
       date,
       clearSkyGhi,
-      cloudySkyGhi: cloudySkyGhi,
+      cloudySkyGhi,
       clearSkyDni: daily?.irradiation?.clear_sky?.dni || 0,
       cloudySkyDni: daily?.irradiation?.cloudy_sky?.dni || 0,
       clearSkyDhi: daily?.irradiation?.clear_sky?.dhi || 0,
@@ -646,19 +646,11 @@ class SolarClient {
    * Determine the advisory level based on solar ratio and configured thresholds
    */
   async getAdvisoryLevel(solarRatio: number): Promise<'normal' | 'low' | 'very_low' | 'critical'> {
-    const { data: settings } = await supabaseAdmin
-      .from('admin_settings')
-      .select('key, value')
-      .in('key', [
-        'solar_advisory_threshold',
-        'solar_very_low_threshold',
-        'solar_critical_threshold',
-      ]);
-
-    const settingsMap: Record<string, string> = {};
-    settings?.forEach((s: any) => {
-      settingsMap[s.key] = s.value;
-    });
+    const settingsMap = await loadAdminSettings([
+      'solar_advisory_threshold',
+      'solar_very_low_threshold',
+      'solar_critical_threshold',
+    ]);
 
     const lowThreshold = parseFloat(settingsMap.solar_advisory_threshold || '0.40');
     const veryLowThreshold = parseFloat(settingsMap.solar_very_low_threshold || '0.25');

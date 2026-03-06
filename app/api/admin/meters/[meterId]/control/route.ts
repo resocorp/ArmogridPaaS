@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 
 export async function POST(
   request: NextRequest,
@@ -23,23 +23,7 @@ export async function POST(
 
     const response = await iotClient.controlMeter(meterId, type, adminToken);
 
-    // Handle new API format
-    if (response.success !== undefined) {
-      if (response.success === '1') {
-        return NextResponse.json({
-          success: true,
-          message: type === 0 ? 'Meter turned off' : type === 1 ? 'Meter turned on' : 'Prepaid mode restored',
-        });
-      } else {
-        return NextResponse.json(
-          { error: response.errorMsg || 'Failed to control meter' },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Handle legacy format
-    if (response.code === 200 || response.code === 0) {
+    if (isIotSuccess(response)) {
       return NextResponse.json({
         success: true,
         message: type === 0 ? 'Meter turned off' : type === 1 ? 'Meter turned on' : 'Prepaid mode restored',
@@ -47,7 +31,7 @@ export async function POST(
     }
 
     return NextResponse.json(
-      { error: response.msg || 'Failed to control meter' },
+      { error: response.errorMsg || response.msg || 'Failed to control meter' },
       { status: 400 }
     );
   } catch (error: any) {

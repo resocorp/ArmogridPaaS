@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, loadAdminSettings } from '@/lib/supabase';
 import { sendLowCreditSms } from '@/lib/sms';
 
 export const dynamic = 'force-dynamic';
@@ -23,15 +23,7 @@ export async function GET(request: NextRequest) {
     console.log('[LowCredit] Starting low credit check...');
 
     // Get SMS low credit alert setting
-    const { data: settings } = await supabaseAdmin
-      .from('admin_settings')
-      .select('key, value')
-      .in('key', ['sms_low_credit_enabled', 'low_credit_threshold']);
-
-    const settingsMap: Record<string, string> = {};
-    settings?.forEach((s: any) => {
-      settingsMap[s.key] = s.value;
-    });
+    const settingsMap = await loadAdminSettings(['sms_low_credit_enabled', 'low_credit_threshold']);
 
     if (settingsMap.sms_low_credit_enabled !== 'true') {
       console.log('[LowCredit] Low credit alerts are disabled');

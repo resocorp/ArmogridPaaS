@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { format, subDays, subMonths, addDays, parseISO } from 'date-fns';
 import { translateErrorMessage } from '@/lib/utils';
 
@@ -54,8 +54,7 @@ export async function GET(
       ? await iotClient.getMeterEnergyMonth(meterId, startDateStr, endDateStr, session.token)
       : await iotClient.getMeterEnergyDay(meterId, startDateStr, endDateStr, session.token);
 
-    // Handle new API response format (success: "1")
-    if (response.success !== '1') {
+    if (!isIotSuccess(response)) {
       const errorMsg = translateErrorMessage(response.errorMsg || 'Failed to fetch energy data');
       return NextResponse.json(
         { error: errorMsg },

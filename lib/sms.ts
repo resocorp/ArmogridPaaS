@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabase';
+import { supabaseAdmin, loadAdminSettings } from './supabase';
 
 // SMS notification types
 export type SmsNotificationType = 
@@ -42,22 +42,14 @@ const SESSION_DURATION = 30 * 60 * 1000; // 30 minutes
  * Get SMS configuration from admin settings
  */
 export async function getSmsConfig(): Promise<SmsConfig> {
-  const { data } = await supabaseAdmin
-    .from('admin_settings')
-    .select('key, value')
-    .in('key', [
-      'sms_server_url',
-      'sms_username',
-      'sms_password',
-      'sms_goip_provider',
-      'sms_goip_line',
-      'sms_enabled',
-    ]);
-
-  const settings: Record<string, string> = {};
-  data?.forEach((s: any) => {
-    settings[s.key] = s.value;
-  });
+  const settings = await loadAdminSettings([
+    'sms_server_url',
+    'sms_username',
+    'sms_password',
+    'sms_goip_provider',
+    'sms_goip_line',
+    'sms_enabled',
+  ]);
 
   return {
     serverUrl: settings.sms_server_url || '',
@@ -590,19 +582,9 @@ export interface AdminAlertData {
  * Get admin phone numbers for alerts
  */
 async function getAdminPhones(): Promise<string[]> {
-  const { data } = await supabaseAdmin
-    .from('admin_settings')
-    .select('key, value')
-    .in('key', ['admin_phone', 'admin_phone_2', 'admin_phone_3']);
+  const settings = await loadAdminSettings(['admin_phone', 'admin_phone_2', 'admin_phone_3']);
 
-  const phones: string[] = [];
-  data?.forEach((s: any) => {
-    if (s.value && s.value.trim()) {
-      phones.push(s.value.trim());
-    }
-  });
-
-  return phones;
+  return Object.values(settings).filter((v) => v && v.trim()).map((v) => v.trim());
 }
 
 /**

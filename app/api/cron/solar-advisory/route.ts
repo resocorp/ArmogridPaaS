@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, loadAdminSettings } from '@/lib/supabase';
 import { solarClient } from '@/lib/solar-client';
 import {
   sendSolarAdvisorySms,
@@ -28,20 +28,12 @@ export async function GET(request: NextRequest) {
     console.log('[SolarAdvisory] Starting solar advisory check...');
 
     // Check if solar advisory is enabled
-    const { data: settings } = await supabaseAdmin
-      .from('admin_settings')
-      .select('key, value')
-      .in('key', [
-        'solar_advisory_enabled',
-        'sms_solar_advisory_enabled',
-        'openweathermap_api_key',
-        'solar_forecast_days',
-      ]);
-
-    const settingsMap: Record<string, string> = {};
-    settings?.forEach((s: any) => {
-      settingsMap[s.key] = s.value;
-    });
+    const settingsMap = await loadAdminSettings([
+      'solar_advisory_enabled',
+      'sms_solar_advisory_enabled',
+      'openweathermap_api_key',
+      'solar_forecast_days',
+    ]);
 
     if (settingsMap.solar_advisory_enabled !== 'true') {
       console.log('[SolarAdvisory] Solar advisory is disabled');
@@ -85,13 +77,7 @@ export async function GET(request: NextRequest) {
     const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
     // Load derating factor from admin settings
-    const { data: extraSettings } = await supabaseAdmin
-      .from('admin_settings')
-      .select('key, value')
-      .in('key', ['solar_derating_factor']);
-
-    const extraMap: Record<string, string> = {};
-    extraSettings?.forEach((s: any) => { extraMap[s.key] = s.value; });
+    const extraMap = await loadAdminSettings(['solar_derating_factor']);
     const deratingFactor = parseFloat(extraMap.solar_derating_factor || '0.78');
 
     let totalAdvisoriesSent = 0;

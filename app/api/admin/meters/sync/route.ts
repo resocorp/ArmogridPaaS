@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
 // POST - Sync all linked meters or specific meter
@@ -52,11 +52,7 @@ export async function POST(request: NextRequest) {
               1
             );
 
-            const isSuccess = loginResponse.success === '1' || 
-                             loginResponse.code === 200 || 
-                             loginResponse.code === 0;
-
-            if (isSuccess && loginResponse.data) {
+            if (isIotSuccess(loginResponse) && loginResponse.data) {
               token = loginResponse.data;
               
               // Update token in database
@@ -79,11 +75,7 @@ export async function POST(request: NextRequest) {
           // Fetch meter info
           const meterInfoResponse = await iotClient.getMeterInfo(cred.room_no, token);
           
-          const meterInfoSuccess = meterInfoResponse.success === '1' || 
-                                  meterInfoResponse.code === 200 || 
-                                  meterInfoResponse.code === 0;
-
-          if (meterInfoSuccess && meterInfoResponse.data) {
+          if (isIotSuccess(meterInfoResponse) && meterInfoResponse.data) {
             // Update meter data in database
             await supabaseAdmin
               .from('meter_credentials')

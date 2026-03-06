@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 
 export async function GET(
   request: NextRequest,
@@ -15,7 +15,7 @@ export async function GET(
     console.log(`[Admin Meters] Fetching meters for project: ${projectId}`);
     const meterListResponse = await iotClient.getProjectMeterList(projectId, adminToken);
     
-    if (meterListResponse.success !== '1') {
+    if (!isIotSuccess(meterListResponse)) {
       return NextResponse.json(
         { error: meterListResponse.errorMsg || 'Failed to fetch project meters' },
         { status: 400 }

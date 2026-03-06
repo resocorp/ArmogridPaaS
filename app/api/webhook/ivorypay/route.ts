@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyWebhookSignature, autoSwapToUsdt } from '@/lib/ivorypay';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateSaleId, translateErrorMessage } from '@/lib/utils';
@@ -142,12 +142,7 @@ async function handleTransactionSuccess(data: any) {
     );
     console.log('[IvoryPay Webhook] SalePower response:', JSON.stringify(saleResponse));
 
-    const isSuccess =
-      saleResponse.success === '1' ||
-      saleResponse.code === 200 ||
-      saleResponse.code === 0;
-
-    if (isSuccess) {
+    if (isIotSuccess(saleResponse)) {
       console.log('[IvoryPay Webhook] Meter credited successfully');
 
       // Update transaction as successful
@@ -375,12 +370,7 @@ async function handleVirtualAccountTransfer(data: any) {
     );
     console.log('[IvoryPay Webhook] SalePower response:', JSON.stringify(saleResponse));
 
-    const isSuccess =
-      saleResponse.success === '1' ||
-      saleResponse.code === 200 ||
-      saleResponse.code === 0;
-
-    if (isSuccess) {
+    if (isIotSuccess(saleResponse)) {
       console.log('[IvoryPay Webhook] Meter credited successfully via on-ramp');
 
       // Update transaction as successful

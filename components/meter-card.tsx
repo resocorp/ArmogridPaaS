@@ -1,14 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Zap, Wifi, WifiOff, Power, PowerOff } from 'lucide-react';
-import { formatNaira } from '@/lib/utils';
+import { formatNaira, cn } from '@/lib/utils';
 import type { UserMeter } from '@/types/iot';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+import { useMeterControl } from '@/lib/hooks/use-meter-control';
 
 interface MeterCardProps {
   meter: UserMeter;
@@ -18,46 +15,14 @@ interface MeterCardProps {
 
 export function MeterCard({ meter, className, onMeterUpdate }: MeterCardProps) {
   const balance = parseFloat(meter.balance) || 0;
-  const epi = parseFloat(meter.epi) || 0;
   const isPowerConnected = meter.switchSta === 1;
   const isNetworkConnected = meter.unConnect === 0;
-  const [isControlling, setIsControlling] = useState(false);
-
-  const handleTogglePower = async () => {
-    if (!isNetworkConnected) {
-      toast.error('Cannot control meter - No network connection');
-      return;
-    }
-
-    setIsControlling(true);
-    try {
-      // Toggle: if ON (1), turn OFF (0), if OFF, turn to Prepaid mode (2)
-      const controlType = isPowerConnected ? 0 : 2;
-      
-      const response = await fetch(`/api/meters/${meter.meterId}/control`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: controlType }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to control meter');
-      }
-
-      toast.success(isPowerConnected ? 'Meter turned OFF' : 'Meter turned ON');
-      
-      // Refresh meter data immediately to get updated state
-      if (onMeterUpdate) {
-        setTimeout(onMeterUpdate, 500);
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to control meter');
-    } finally {
-      setIsControlling(false);
-    }
-  };
+  const { isControlling, handleTogglePower } = useMeterControl(
+    meter.meterId,
+    isPowerConnected,
+    isNetworkConnected,
+    onMeterUpdate
+  );
 
   return (
     <Card className={cn('hover:shadow-lg transition-shadow', className)}>

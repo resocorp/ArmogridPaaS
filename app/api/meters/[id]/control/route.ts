@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { translateErrorMessage } from '@/lib/utils';
 
 export async function POST(
@@ -35,12 +35,7 @@ export async function POST(
     const response = await iotClient.controlMeter(meterId, type, adminToken);
     console.log(`[Meter Control] IoT response:`, JSON.stringify(response));
 
-    // Check both old and new API formats
-    const isSuccess = 
-      (response.success === '1') || // New format
-      (response.code === 200 || response.code === 0); // Legacy format
-
-    if (!isSuccess) {
+    if (!isIotSuccess(response)) {
       const rawErrorMsg = response.errorMsg || response.msg || 'Failed to control meter';
       const errorMsg = translateErrorMessage(rawErrorMsg);
       console.error(`[Meter Control] Control failed:`, rawErrorMsg, '-> Translated:', errorMsg);

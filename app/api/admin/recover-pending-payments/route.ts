@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyPayment } from '@/lib/paystack';
-import { iotClient } from '@/lib/iot-client';
-import { getAdminToken } from '@/lib/auth';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
+import { getAdminToken, requireAdmin } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { generateSaleId, translateErrorMessage } from '@/lib/utils';
 import { BUY_TYPE } from '@/lib/constants';
-import { requireAdmin } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,12 +118,7 @@ export async function POST(request: NextRequest) {
           adminToken
         );
 
-        const isSuccess =
-          saleResponse.success === '1' ||
-          saleResponse.code === 200 ||
-          saleResponse.code === 0;
-
-        if (isSuccess) {
+        if (isIotSuccess(saleResponse)) {
           await supabaseAdmin
             .from('transactions')
             .update({

@@ -14,7 +14,7 @@ import type {
   IvoryPayBuyCryptoRequest,
   IvoryPayBuyCryptoResponse,
 } from '@/types/ivorypay';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, loadAdminSettings } from '@/lib/supabase';
 
 const IVORYPAY_SECRET_KEY = process.env.IVORYPAY_SECRET_KEY!;
 const IVORYPAY_PUBLIC_KEY = process.env.NEXT_PUBLIC_IVORYPAY_PUBLIC_KEY!;
@@ -402,21 +402,13 @@ export async function getPaymentGatewayConfig(): Promise<{
   ivorypayAutoSwapToUsdt: boolean;
 }> {
   try {
-    const { data } = await supabaseAdmin
-      .from('admin_settings')
-      .select('key, value')
-      .in('key', [
-        'active_payment_gateway',
-        'paystack_enabled',
-        'ivorypay_enabled',
-        'ivorypay_default_crypto',
-        'ivorypay_auto_swap_to_usdt',
-      ]);
-
-    const settings: Record<string, string> = {};
-    data?.forEach((s: any) => {
-      settings[s.key] = s.value;
-    });
+    const settings = await loadAdminSettings([
+      'active_payment_gateway',
+      'paystack_enabled',
+      'ivorypay_enabled',
+      'ivorypay_default_crypto',
+      'ivorypay_auto_swap_to_usdt',
+    ]);
 
     return {
       activeGateway: (settings.active_payment_gateway as PaymentGateway) || 'paystack',

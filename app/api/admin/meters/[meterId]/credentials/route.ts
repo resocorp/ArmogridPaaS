@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
 // GET - Check if credentials exist for a meter
@@ -81,12 +81,7 @@ export async function POST(
     
     console.log(`[Credentials] Login response:`, JSON.stringify(loginResponse));
 
-    // Check for success
-    const isSuccess = loginResponse.success === '1' || 
-                     loginResponse.code === 200 || 
-                     loginResponse.code === 0;
-
-    if (!isSuccess) {
+    if (!isIotSuccess(loginResponse)) {
       return NextResponse.json(
         { error: loginResponse.errorMsg || loginResponse.msg || 'Invalid credentials' },
         { status: 401 }
@@ -107,11 +102,7 @@ export async function POST(
     const meterInfoResponse = await iotClient.getMeterInfo(roomNo, userToken);
     console.log(`[Credentials] Meter info response:`, JSON.stringify(meterInfoResponse));
 
-    const meterInfoSuccess = meterInfoResponse.success === '1' || 
-                            meterInfoResponse.code === 200 || 
-                            meterInfoResponse.code === 0;
-
-    const meterData = meterInfoSuccess ? meterInfoResponse.data : null;
+    const meterData = isIotSuccess(meterInfoResponse) ? meterInfoResponse.data : null;
 
     // Calculate token expiry (24 hours from now)
     const tokenExpiresAt = new Date();

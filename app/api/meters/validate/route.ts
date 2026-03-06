@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { isValidMeterId } from '@/lib/utils';
 
@@ -21,12 +21,7 @@ export async function POST(request: NextRequest) {
       const adminToken = await getAdminToken();
       const meterInfo = await iotClient.getMeterInfoById(meterId, adminToken);
       
-      // Check if the response indicates success (handle both API formats)
-      const isSuccess = 
-        (meterInfo.success === '1') || // New format
-        (meterInfo.code === 200 || meterInfo.code === 0); // Legacy format
-      
-      if (!isSuccess) {
+      if (!isIotSuccess(meterInfo)) {
         // Meter not found
         return NextResponse.json({
           success: false,

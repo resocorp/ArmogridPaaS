@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
 interface MeterStatus {
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
 
     // Step 1: Fetch all projects
     const projectsResponse = await iotClient.getProjectList('', 100, 1, adminToken);
-    if (projectsResponse.success !== '1') {
+    if (!isIotSuccess(projectsResponse)) {
       console.error('[Analytics] Failed to fetch projects:', projectsResponse.errorMsg);
       return NextResponse.json(
         { error: 'Failed to fetch projects' },
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
       const projectName = project.projectName || 'Unknown';
       try {
         const meterListResponse = await iotClient.getProjectMeterList(projectId, adminToken);
-        if (meterListResponse.success === '1' && meterListResponse.data?.list) {
+        if (isIotSuccess(meterListResponse) && meterListResponse.data?.list) {
           return { projectId, projectName, meters: meterListResponse.data.list };
         }
       } catch (e) {
@@ -195,7 +195,7 @@ export async function GET(request: NextRequest) {
           
           // Extract live power from getMeterInfo response
           const powerResponse = powerResults[j];
-          if (powerResponse && (powerResponse.success === '1' || powerResponse.code === 200) && powerResponse.data) {
+          if (powerResponse && isIotSuccess(powerResponse) && powerResponse.data) {
             const livePower = parseFloat(powerResponse.data.p || '0');
             meterResults[meterIndex].power = livePower;
           }
@@ -281,7 +281,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Process sales data - historical data available for ALL meters including offline
-      if (meter.sales && (meter.sales as any).success === '1' && meter.sales.data) {
+      if (meter.sales && isIotSuccess(meter.sales as any) && meter.sales.data) {
         for (const sale of meter.sales.data) {
           const amount = parseFloat(sale.saleMoney || sale.money || '0');
           if (amount > 0) {
@@ -301,7 +301,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Process energy data - historical data available for ALL meters including offline
-      if (meter.energy && meter.energy.success === '1' && meter.energy.data) {
+      if (meter.energy && isIotSuccess(meter.energy) && meter.energy.data) {
         let meterTotalEnergy = 0;
         for (const record of meter.energy.data) {
           const energy = parseFloat(record.powerUse || '0');

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { supabaseAdmin } from '@/lib/supabase';
 
 // This endpoint is designed to be called by a cron job (e.g., Vercel Cron)
@@ -73,11 +73,7 @@ export async function GET(request: NextRequest) {
 
           try {
             const meterInfoResponse = await iotClient.getMeterInfoById(meterId, adminToken);
-            const meterSuccess = meterInfoResponse.success === '1' ||
-                                 meterInfoResponse.code === 200 ||
-                                 meterInfoResponse.code === 0;
-
-            if (!meterSuccess || !meterInfoResponse.data) {
+            if (!isIotSuccess(meterInfoResponse) || !meterInfoResponse.data) {
               offlineMeters++;
               return;
             }

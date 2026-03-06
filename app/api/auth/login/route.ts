@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { createSession } from '@/lib/auth';
 import { translateErrorMessage } from '@/lib/utils';
 
@@ -23,12 +23,7 @@ export async function POST(request: NextRequest) {
     const response = await iotClient.login(username, password, type);
     console.log('[Login] IoT response:', JSON.stringify(response));
 
-    // Check success in both API formats
-    const isSuccess = 
-      (response.success === '1') || // New format
-      (response.code === 200 || response.code === 0); // Legacy format
-
-    if (!isSuccess) {
+    if (!isIotSuccess(response)) {
       const rawErrorMsg = response.errorMsg || response.msg || 'Login failed';
       const errorMsg = translateErrorMessage(rawErrorMsg);
       console.error('[Login] Login failed:', rawErrorMsg, '-> Translated:', errorMsg);

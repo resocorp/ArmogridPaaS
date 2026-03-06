@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +18,7 @@ export async function GET(request: NextRequest) {
 
     console.log('[Admin Projects] API response:', JSON.stringify(response));
 
-    // Check for success (API returns success: "1" for success)
-    if (response.success !== '1') {
+    if (!isIotSuccess(response)) {
       return NextResponse.json(
         { error: response.errorMsg || 'Failed to fetch projects' },
         { status: 400 }

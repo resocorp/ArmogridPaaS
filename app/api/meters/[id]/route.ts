@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
+import { translateErrorMessage } from '@/lib/utils';
 
 export async function GET(
   request: NextRequest,
@@ -20,9 +21,19 @@ export async function GET(
     // Get meter info
     const response = await iotClient.getMeterInfoById(meterId, session.token);
 
-    if (response.code !== 200 && response.code !== 0) {
+    if (!isIotSuccess(response)) {
+      const rawErrorMsg = response.errorMsg || response.msg || 'Failed to fetch meter info';
+      const errorMsg = translateErrorMessage(rawErrorMsg);
+
+      if (rawErrorMsg.toLowerCase().includes('token') || rawErrorMsg.toLowerCase().includes('expired')) {
+        return NextResponse.json(
+          { error: 'Session expired', tokenExpired: true },
+          { status: 401 }
+        );
+      }
+
       return NextResponse.json(
-        { error: response.msg || 'Failed to fetch meter info' },
+        { error: errorMsg },
         { status: 400 }
       );
     }
@@ -34,7 +45,7 @@ export async function GET(
   } catch (error: any) {
     if (error.message === 'Unauthorized') {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Unauthorized', tokenExpired: true },
         { status: 401 }
       );
     }

@@ -96,13 +96,4 @@ export async function initializePaystackPopup(options: PaystackPopupOptions): Pr
   });
 }
 
-/**
- * Get Paystack public key from environment
- */
-export function getPaystackPublicKey(): string {
-  const key = process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY;
-  if (!key) {
-    throw new Error('NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY is not set');
-  }
-  return key;
-}
+// getPaystackPublicKey is exported from @/lib/paystack — import it from there.

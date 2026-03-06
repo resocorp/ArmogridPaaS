@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { translateErrorMessage } from '@/lib/utils';
 
 // POST /api/meters/info - Get detailed meter info using roomNo
@@ -19,12 +19,7 @@ export async function POST(request: NextRequest) {
     // Get detailed meter info using roomNo
     const response = await iotClient.getMeterInfo(roomNo, session.token);
 
-    // Check success in both API formats
-    const isSuccess = 
-      (response.success === '1') || 
-      (response.code === 200 || response.code === 0);
-
-    if (!isSuccess) {
+    if (!isIotSuccess(response)) {
       const rawErrorMsg = response.errorMsg || response.msg || 'Failed to fetch meter info';
       const errorMsg = translateErrorMessage(rawErrorMsg);
       

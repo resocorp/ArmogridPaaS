@@ -6,7 +6,7 @@ import {
   generateIvoryPayReference,
   calculateIvoryPayFee 
 } from '@/lib/ivorypay';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { getAdminToken } from '@/lib/auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { nairaToKobo, isValidMeterId, translateErrorMessage } from '@/lib/utils';
@@ -95,11 +95,7 @@ export async function POST(request: NextRequest) {
       const adminToken = await getAdminToken();
       const meterInfo = await iotClient.getMeterInfoById(meterId, adminToken);
       
-      const isSuccess = 
-        (meterInfo.success === '1') || 
-        (meterInfo.code === 200 || meterInfo.code === 0);
-      
-      if (!isSuccess) {
+      if (!isIotSuccess(meterInfo)) {
         const rawErrorMsg = meterInfo.errorMsg || meterInfo.msg || 'Unknown error';
         const errorMsg = translateErrorMessage(rawErrorMsg);
         console.error('[IvoryPay OnRamp] Meter lookup failed:', errorMsg);

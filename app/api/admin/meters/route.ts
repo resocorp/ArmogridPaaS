@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin, getAdminToken } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 
 export async function GET(request: NextRequest) {
   try {
@@ -10,9 +10,9 @@ export async function GET(request: NextRequest) {
     // First get all projects
     const projectsResponse = await iotClient.getProjectList('', 100, 1, adminToken);
 
-    if (projectsResponse.code !== 200 && projectsResponse.code !== 0) {
+    if (!isIotSuccess(projectsResponse)) {
       return NextResponse.json(
-        { error: projectsResponse.msg || 'Failed to fetch projects' },
+        { error: projectsResponse.errorMsg || projectsResponse.msg || 'Failed to fetch projects' },
         { status: 400 }
       );
     }
@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
             adminToken
           );
           
-          if (roomsResponse.code === 200 || roomsResponse.code === 0) {
+          if (isIotSuccess(roomsResponse)) {
             const rooms = roomsResponse.data || [];
             rooms.forEach((room: any) => {
               allMeters.push({

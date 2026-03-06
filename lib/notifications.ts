@@ -1,4 +1,4 @@
-import { supabaseAdmin } from './supabase';
+import { loadAdminSettings } from './supabase';
 
 interface NotificationData {
   name: string;
@@ -14,17 +14,7 @@ interface NotificationData {
  * Get admin settings for notifications
  */
 async function getNotificationSettings() {
-  const { data } = await supabaseAdmin
-    .from('admin_settings')
-    .select('key, value')
-    .in('key', ['admin_email', 'admin_whatsapp', 'ultramsg_instance_id', 'ultramsg_token']);
-
-  const settings: Record<string, string> = {};
-  data?.forEach((s: any) => {
-    settings[s.key] = s.value;
-  });
-
-  return settings;
+  return loadAdminSettings(['admin_email', 'admin_whatsapp', 'ultramsg_instance_id', 'ultramsg_token']);
 }
 
 /**

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth';
-import { iotClient } from '@/lib/iot-client';
+import { iotClient, isIotSuccess } from '@/lib/iot-client';
 import { translateErrorMessage } from '@/lib/utils';
 
 export async function GET() {
@@ -10,12 +10,7 @@ export async function GET() {
     // Get user's meter list
     const response = await iotClient.getUserMeterList(session.token);
 
-    // Check success in both API formats
-    const isSuccess = 
-      (response.success === '1') || // New format
-      (response.code === 200 || response.code === 0); // Legacy format
-
-    if (!isSuccess) {
+    if (!isIotSuccess(response)) {
       const rawErrorMsg = response.errorMsg || response.msg || 'Failed to fetch meters';
       const errorMsg = translateErrorMessage(rawErrorMsg);
       
