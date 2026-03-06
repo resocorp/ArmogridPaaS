@@ -9,6 +9,8 @@ export type SmsNotificationType =
   | 'meter_online'
   | 'payment_success'
   | 'payment_failed'
+  | 'solar_advisory'
+  | 'solar_recharge_recommendation'
   | 'custom';
 
 export interface SmsConfig {
@@ -708,6 +710,88 @@ export async function sendRegistrationAlertToAdmin(data: {
   }
   
   return allSent;
+}
+
+// =============================================================================
+// SOLAR ADVISORY NOTIFICATIONS
+// =============================================================================
+
+export interface SolarAdvisoryData {
+  name: string;
+  phone: string;
+  locationName: string;
+  solarPercent: number; // e.g. 35 for 35%
+  advisoryLevel: 'low' | 'very_low' | 'critical';
+  weatherDesc?: string;
+  forecastDate?: string;
+}
+
+/**
+ * Send low solar advisory SMS to a customer
+ */
+export async function sendSolarAdvisorySms(data: SolarAdvisoryData): Promise<boolean> {
+  let message: string;
+
+  switch (data.advisoryLevel) {
+    case 'critical':
+      message = `ArmogridSolar URGENT: Minimal solar generation expected tomorrow at ${data.locationName} (${data.solarPercent}% of normal).${data.weatherDesc ? ' ' + data.weatherDesc + '.' : ''} Please recharge immediately to maintain power.`;
+      break;
+    case 'very_low':
+      message = `ArmogridSolar Alert: Very low solar expected tomorrow at ${data.locationName} (${data.solarPercent}% of normal).${data.weatherDesc ? ' ' + data.weatherDesc + '.' : ''} We recommend recharging today to avoid disruption.`;
+      break;
+    case 'low':
+    default:
+      message = `ArmogridSolar Advisory: Reduced solar generation expected tomorrow at ${data.locationName}. Expected output: ${data.solarPercent}% of normal. Please conserve power or recharge in advance.`;
+      break;
+  }
+
+  const result = await sendSms(data.phone, message, 'solar_advisory');
+  return result.success;
+}
+
+/**
+ * Send solar advisory alert to admin phones
+ */
+export async function sendSolarAdvisoryToAdmin(data: {
+  locationName: string;
+  solarPercent: number;
+  advisoryLevel: string;
+  weatherDesc?: string;
+  customersNotified: number;
+}): Promise<boolean> {
+  const adminPhones = await getAdminPhones();
+
+  if (adminPhones.length === 0) {
+    console.log('[SMS] No admin phones configured for solar advisory alerts');
+    return false;
+  }
+
+  const message = `SOLAR ADVISORY [${data.advisoryLevel.toUpperCase()}]: ${data.locationName} - Expected solar: ${data.solarPercent}% of normal tomorrow.${data.weatherDesc ? ' ' + data.weatherDesc + '.' : ''} ${data.customersNotified} customer(s) notified.`;
+
+  let allSent = true;
+  for (const phone of adminPhones) {
+    const result = await sendSms(phone, message, 'solar_advisory');
+    if (!result.success) allSent = false;
+  }
+
+  return allSent;
+}
+
+/**
+ * Send smart recharge recommendation SMS
+ */
+export async function sendRechargeRecommendationSms(data: {
+  name: string;
+  phone: string;
+  recommendedAmount: number;
+  balance: number;
+  days: number;
+  locationName: string;
+}): Promise<boolean> {
+  const message = `ArmogridSolar: Based on the solar forecast, we recommend recharging at least NGN ${data.recommendedAmount.toLocaleString()} to cover the next ${data.days} days. Current balance: NGN ${data.balance.toLocaleString()}. Recharge at armogridsolar.vercel.app`;
+
+  const result = await sendSms(data.phone, message, 'solar_recharge_recommendation');
+  return result.success;
 }
 
 /**

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Shield, LogOut, BarChart3, Zap, CreditCard, Users, Bell, Settings } from 'lucide-react';
+import { Shield, LogOut, BarChart3, Zap, CreditCard, Users, Bell, Settings, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminAnalytics } from '@/components/admin-analytics';
 import { AdminSmsSettings } from '@/components/admin-sms-settings';
@@ -14,6 +14,8 @@ import { AdminMetersTab } from '@/components/admin/admin-meters-tab';
 import { AdminTransactionsTab } from '@/components/admin/admin-transactions-tab';
 import { AdminRegistrationsTab } from '@/components/admin/admin-registrations-tab';
 import { AdminSettingsTab } from '@/components/admin/admin-settings-tab';
+import { SolarForecastWidget } from '@/components/solar-forecast';
+import { AdminSolarSettings } from '@/components/admin/admin-solar-settings';
 import type { Stats, ActivityItem, Project } from '@/components/admin/types';
 
 export default function AdminPage() {
@@ -125,9 +127,10 @@ export default function AdminPage() {
 
       <main className="container mx-auto px-4 py-6">
         <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 mb-6">
+          <TabsList className="grid w-full grid-cols-5 lg:grid-cols-9 mb-6">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="analytics"><BarChart3 className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Analytics</span></TabsTrigger>
+            <TabsTrigger value="solar"><Sun className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Solar</span></TabsTrigger>
             <TabsTrigger value="meters"><Zap className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Meters</span></TabsTrigger>
             <TabsTrigger value="transactions"><CreditCard className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Transactions</span></TabsTrigger>
             <TabsTrigger value="registrations"><Users className="w-4 h-4 sm:mr-1" /><span className="hidden sm:inline">Registrations</span></TabsTrigger>
@@ -150,6 +153,13 @@ export default function AdminPage() {
 
           <TabsContent value="analytics">
             <AdminAnalytics />
+          </TabsContent>
+
+          <TabsContent value="solar">
+            <div className="space-y-8">
+              <SolarForecastWidget />
+              <AdminSolarSettings />
+            </div>
           </TabsContent>
 
           <TabsContent value="meters">

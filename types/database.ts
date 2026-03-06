@@ -136,6 +136,60 @@ export interface CustomerNotificationPreference {
   updated_at: string;
 }
 
+export interface SolarPanelConfig {
+  type?: 'mono-si' | 'poly-si' | 'tf-as' | 'cdte';
+  area?: number;
+  tilt?: number;
+  azimuth?: number;
+  peak_power?: number;
+}
+
+export interface SolarProjectLocation {
+  id: string;
+  project_id: string;
+  project_name: string | null;
+  lat: number;
+  lon: number;
+  timezone: string;
+  owm_location_id: string | null;
+  owm_panel_ids: string[];
+  panel_config: SolarPanelConfig;
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SolarForecast {
+  id: string;
+  project_id: string;
+  forecast_date: string;
+  clear_sky_ghi: number;
+  clear_sky_dni: number;
+  clear_sky_dhi: number;
+  cloudy_sky_ghi: number;
+  cloudy_sky_dni: number;
+  cloudy_sky_dhi: number;
+  solar_ratio: number;
+  panel_energy_clear_sky: number;
+  panel_energy_cloudy_sky: number;
+  sunrise: string | null;
+  sunset: string | null;
+  weather_summary: string | null;
+  weather_icon: string | null;
+  cloud_cover_pct: number;
+  temp_min: number | null;
+  temp_max: number | null;
+  rain_mm: number;
+  wind_speed: number | null;
+  humidity: number | null;
+  advisory_level: 'normal' | 'low' | 'very_low' | 'critical';
+  advisory_sent: boolean;
+  advisory_sent_at: string | null;
+  hourly_data: Record<string, any>[] | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export type Database = {
   public: {
     Tables: {
@@ -185,6 +239,18 @@ export type Database = {
         Row: CustomerRegistration;
         Insert: Omit<CustomerRegistration, "id" | "created_at" | "updated_at">;
         Update: Partial<Omit<CustomerRegistration, "id" | "created_at">>;
+        Relationships: [];
+      };
+      solar_project_locations: {
+        Row: SolarProjectLocation;
+        Insert: Omit<SolarProjectLocation, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<SolarProjectLocation, "id" | "created_at">>;
+        Relationships: [];
+      };
+      solar_forecasts: {
+        Row: SolarForecast;
+        Insert: Omit<SolarForecast, "id" | "created_at" | "updated_at">;
+        Update: Partial<Omit<SolarForecast, "id" | "created_at">>;
         Relationships: [];
       };
     };
