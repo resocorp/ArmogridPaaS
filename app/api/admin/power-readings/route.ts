@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    const startIso = searchParams.get('startIso');
+    const endIso = searchParams.get('endIso');
     const limit = parseInt(searchParams.get('limit') || '100');
 
     let query = supabaseAdmin
@@ -18,10 +20,14 @@ export async function GET(request: NextRequest) {
       .order('recorded_at', { ascending: true })
       .limit(limit);
 
-    if (startDate) {
+    if (startIso) {
+      query = query.gte('recorded_at', startIso);
+    } else if (startDate) {
       query = query.gte('recorded_at', `${startDate}T00:00:00`);
     }
-    if (endDate) {
+    if (endIso) {
+      query = query.lte('recorded_at', endIso);
+    } else if (endDate) {
       query = query.lte('recorded_at', `${endDate}T23:59:59`);
     }
 

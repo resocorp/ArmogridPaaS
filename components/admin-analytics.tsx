@@ -96,10 +96,17 @@ export function AdminAnalytics() {
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
 
   // Per-chart independent state
-  type PowerRange = '3h' | '6h' | '12h' | '24h' | '3d' | '7d';
+  type PowerRange = '3h' | '6h' | '12h' | '24h' | '3d' | '7d' | 'custom';
   const [powerChartRange, setPowerChartRange] = useState<PowerRange>('24h');
   const [powerHistory, setPowerHistory] = useState<{ timestamp: string; power: number; activeMeters: number }[]>([]);
   const [isPowerLoading, setIsPowerLoading] = useState(false);
+  const [showPowerCustomPicker, setShowPowerCustomPicker] = useState(false);
+  const [powerCustomStart, setPowerCustomStart] = useState<string>(
+    format(subHours(new Date(), 24), "yyyy-MM-dd'T'HH:mm")
+  );
+  const [powerCustomEnd, setPowerCustomEnd] = useState<string>(
+    format(new Date(), "yyyy-MM-dd'T'HH:mm")
+  );
   const [revenueChartDays, setRevenueChartDays] = useState<number>(0); // 0 = show all
   const [energyChartDays, setEnergyChartDays] = useState<number>(0); // 0 = show all
 
@@ -169,29 +176,41 @@ export function AdminAnalytics() {
   };
 
   // Load power history for the dedicated power chart (independent of main date range)
-  const loadPowerHistory = async (range: PowerRange) => {
+  const loadPowerHistory = async (range: PowerRange, customStart?: string, customEnd?: string) => {
     try {
       setIsPowerLoading(true);
       const now = new Date();
-      let cutoffDate: Date;
-      switch (range) {
-        case '3h': cutoffDate = subHours(now, 3); break;
-        case '6h': cutoffDate = subHours(now, 6); break;
-        case '12h': cutoffDate = subHours(now, 12); break;
-        case '24h': cutoffDate = subHours(now, 24); break;
-        case '3d': cutoffDate = subDays(now, 3); break;
-        case '7d': cutoffDate = subDays(now, 7); break;
-        default: cutoffDate = subHours(now, 24);
+      let startIso: string;
+      let endIso: string;
+      let maxPoints: number;
+
+      if (range === 'custom' && customStart && customEnd) {
+        startIso = new Date(customStart).toISOString();
+        endIso = new Date(customEnd).toISOString();
+        const diffHours = (new Date(customEnd).getTime() - new Date(customStart).getTime()) / (1000 * 60 * 60);
+        maxPoints = diffHours > 72 ? 2500 : diffHours > 24 ? 1200 : 600;
+      } else {
+        let cutoffDate: Date;
+        switch (range) {
+          case '3h': cutoffDate = subHours(now, 3); break;
+          case '6h': cutoffDate = subHours(now, 6); break;
+          case '12h': cutoffDate = subHours(now, 12); break;
+          case '24h': cutoffDate = subHours(now, 24); break;
+          case '3d': cutoffDate = subDays(now, 3); break;
+          case '7d': cutoffDate = subDays(now, 7); break;
+          default: cutoffDate = subHours(now, 24);
+        }
+        startIso = cutoffDate.toISOString();
+        endIso = now.toISOString();
+        maxPoints = range === '7d' ? 2500 : range === '3d' ? 1200 : 600;
       }
-      const startStr = format(cutoffDate, 'yyyy-MM-dd');
-      const endStr = format(now, 'yyyy-MM-dd');
-      const maxPoints = range === '7d' ? 2500 : range === '3d' ? 1200 : 600;
-      const response = await fetch(`/api/admin/power-readings?startDate=${startStr}&endDate=${endStr}&limit=${maxPoints}`);
+
+      const response = await fetch(
+        `/api/admin/power-readings?startIso=${encodeURIComponent(startIso)}&endIso=${encodeURIComponent(endIso)}&limit=${maxPoints}`
+      );
       const data = await response.json();
       if (data.success) {
-        const cutoffIso = cutoffDate.toISOString();
-        const filtered = (data.data || []).filter((r: any) => r.recorded_at >= cutoffIso);
-        setPowerHistory(filtered.map((r: any) => ({
+        setPowerHistory((data.data || []).map((r: any) => ({
           timestamp: r.recorded_at,
           power: parseFloat(r.total_power) || 0,
           activeMeters: r.active_meters || 0,
@@ -294,9 +313,11 @@ export function AdminAnalytics() {
     }
   }, [customStartDate, customEndDate]);
 
-  // Reload power history when its range changes
+  // Reload power history when its range changes (skip custom — user must click Apply)
   useEffect(() => {
-    loadPowerHistory(powerChartRange);
+    if (powerChartRange !== 'custom') {
+      loadPowerHistory(powerChartRange);
+    }
   }, [powerChartRange]);
 
   if (isLoading) {
@@ -790,30 +811,81 @@ export function AdminAnalytics() {
                 Power draw at 5-min resolution (kW){isPowerLoading ? ' — Loading...' : ` — ${powerHistory.length} data points`}
               </CardDescription>
             </div>
-            <div className="flex gap-1 flex-wrap">
-              {([
-                {label:'3h',value:'3h'},{label:'6h',value:'6h'},{label:'12h',value:'12h'},
-                {label:'24h',value:'24h'},{label:'3 Days',value:'3d'},{label:'7 Days',value:'7d'},
-              ] as {label:string;value:PowerRange}[]).map(opt => (
+            <div className="flex gap-1 flex-wrap items-start">
+              <div className="flex gap-1 flex-wrap">
+                {([
+                  {label:'3h',value:'3h'},{label:'6h',value:'6h'},{label:'12h',value:'12h'},
+                  {label:'24h',value:'24h'},{label:'3 Days',value:'3d'},{label:'7 Days',value:'7d'},
+                ] as {label:string;value:PowerRange}[]).map(opt => (
+                  <Button
+                    key={opt.value}
+                    variant={powerChartRange===opt.value?'default':'outline'}
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => { setPowerChartRange(opt.value); setShowPowerCustomPicker(false); }}
+                  >
+                    {opt.label}
+                  </Button>
+                ))}
                 <Button
-                  key={opt.value}
-                  variant={powerChartRange===opt.value?'default':'outline'}
+                  variant={powerChartRange==='custom'?'default':'outline'}
                   size="sm"
                   className="h-7 px-2 text-xs"
-                  onClick={() => setPowerChartRange(opt.value)}
+                  onClick={() => { setPowerChartRange('custom'); setShowPowerCustomPicker(v => !v); }}
                 >
-                  {opt.label}
+                  <Calendar className="w-3 h-3 mr-1" />
+                  Custom
                 </Button>
-              ))}
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={() => loadPowerHistory(powerChartRange)}
-                disabled={isPowerLoading}
-              >
-                <RefreshCw className={`w-3 h-3 ${isPowerLoading ? 'animate-spin' : ''}`} />
-              </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => loadPowerHistory(powerChartRange, powerCustomStart, powerCustomEnd)}
+                  disabled={isPowerLoading}
+                >
+                  <RefreshCw className={`w-3 h-3 ${isPowerLoading ? 'animate-spin' : ''}`} />
+                </Button>
+              </div>
+              {showPowerCustomPicker && (
+                <div className="w-full mt-2 p-3 border rounded-lg bg-muted/30 flex flex-wrap gap-3 items-end">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">From</label>
+                    <input
+                      type="datetime-local"
+                      value={powerCustomStart}
+                      max={powerCustomEnd}
+                      onChange={(e) => setPowerCustomStart(e.target.value)}
+                      className="px-2 py-1.5 border rounded-md bg-background text-xs h-7"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs font-medium text-muted-foreground">To</label>
+                    <input
+                      type="datetime-local"
+                      value={powerCustomEnd}
+                      max={format(new Date(), "yyyy-MM-dd'T'HH:mm")}
+                      onChange={(e) => setPowerCustomEnd(e.target.value)}
+                      className="px-2 py-1.5 border rounded-md bg-background text-xs h-7"
+                    />
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-7 px-3 text-xs"
+                    onClick={() => { loadPowerHistory('custom', powerCustomStart, powerCustomEnd); setShowPowerCustomPicker(false); }}
+                    disabled={isPowerLoading || !powerCustomStart || !powerCustomEnd}
+                  >
+                    Apply
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => setShowPowerCustomPicker(false)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -831,7 +903,15 @@ export function AdminAnalytics() {
                 <XAxis
                   dataKey="timestamp"
                   tick={{ fontSize: 11 }}
-                  tickFormatter={(v) => format(new Date(v), powerChartRange === '3h' || powerChartRange === '6h' ? 'HH:mm' : 'MMM d HH:mm')}
+                  tickFormatter={(v) => {
+                    if (powerChartRange === 'custom') {
+                      const diffHours = powerCustomEnd && powerCustomStart
+                        ? (new Date(powerCustomEnd).getTime() - new Date(powerCustomStart).getTime()) / (1000 * 60 * 60)
+                        : 24;
+                      return format(new Date(v), diffHours <= 6 ? 'HH:mm' : 'MMM d HH:mm');
+                    }
+                    return format(new Date(v), powerChartRange === '3h' || powerChartRange === '6h' ? 'HH:mm' : 'MMM d HH:mm');
+                  }}
                   minTickGap={40}
                 />
                 <YAxis
