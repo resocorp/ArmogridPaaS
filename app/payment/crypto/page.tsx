@@ -77,13 +77,13 @@ function CryptoPaymentContent() {
 
   if (!address || !amount || !crypto) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
               <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Invalid Payment</h2>
-              <p className="text-gray-600">Payment details not found. Please try again.</p>
+              <h2 className="text-xl font-semibold mb-2">Invalid Payment</h2>
+              <p className="text-muted-foreground">Payment details not found. Please try again.</p>
               <Button className="mt-4" onClick={() => window.location.href = '/'}>
                 Go Home
               </Button>
@@ -96,16 +96,16 @@ function CryptoPaymentContent() {
 
   if (status === 'success') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful!</h2>
-              <p className="text-gray-600 mb-4">
+              <h2 className="text-2xl font-bold mb-2">Payment Successful!</h2>
+              <p className="text-muted-foreground mb-4">
                 Your payment of ₦{naira} has been confirmed.
               </p>
-              <p className="text-sm text-gray-500 mb-6">
+              <p className="text-sm text-muted-foreground mb-6">
                 Your meter will be credited automatically.
               </p>
               <Button onClick={() => window.location.href = '/dashboard/meters'}>
@@ -120,13 +120,13 @@ function CryptoPaymentContent() {
 
   if (status === 'expired') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
               <Clock className="w-16 h-16 text-orange-500 mx-auto mb-4" />
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Expired</h2>
-              <p className="text-gray-600 mb-4">
+              <h2 className="text-2xl font-bold mb-2">Payment Expired</h2>
+              <p className="text-muted-foreground mb-4">
                 This payment session has expired. Please initiate a new payment.
               </p>
               <Button onClick={() => window.location.href = '/dashboard/meters'}>
@@ -140,7 +140,7 @@ function CryptoPaymentContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Complete Your Payment</CardTitle>
@@ -150,7 +150,7 @@ function CryptoPaymentContent() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Timer */}
-          <div className="flex items-center justify-center gap-2 text-orange-600 bg-orange-50 p-3 rounded-lg">
+          <div className="flex items-center justify-center gap-2 text-orange-600 dark:text-orange-400 bg-orange-500/10 p-3 rounded-lg">
             <Clock className="w-5 h-5" />
             <span className="font-medium">
               Time remaining: {formatTime(timeLeft)}
@@ -158,24 +158,24 @@ function CryptoPaymentContent() {
           </div>
 
           {/* Amount Details */}
-          <div className="bg-gray-50 p-4 rounded-lg space-y-2">
+          <div className="bg-muted/50 p-4 rounded-lg space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-600">Amount (Naira)</span>
+              <span className="text-muted-foreground">Amount (Naira)</span>
               <span className="font-semibold">₦{Number(naira).toLocaleString()}</span>
             </div>
             <div className="flex justify-between border-t pt-2">
-              <span className="text-gray-600">Amount ({crypto})</span>
+              <span className="text-muted-foreground">Amount ({crypto})</span>
               <span className="font-bold text-lg text-green-600">{amount} {crypto}</span>
             </div>
           </div>
 
           {/* Crypto Address */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-foreground">
               Send exactly {amount} {crypto} to:
             </label>
             <div className="flex items-center gap-2">
-              <div className="flex-1 bg-gray-100 p-3 rounded-lg font-mono text-sm break-all">
+              <div className="flex-1 bg-muted p-3 rounded-lg font-mono text-sm break-all">
                 {address}
               </div>
               <Button
@@ -204,7 +204,7 @@ function CryptoPaymentContent() {
           </Button>
 
           {/* Status */}
-          <div className="flex items-center justify-center gap-2 text-blue-600 bg-blue-50 p-3 rounded-lg">
+          <div className="flex items-center justify-center gap-2 text-blue-600 dark:text-blue-400 bg-blue-500/10 p-3 rounded-lg">
             {status === 'checking' ? (
               <>
                 <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
@@ -219,7 +219,7 @@ function CryptoPaymentContent() {
           </div>
 
           {/* Instructions */}
-          <div className="text-sm text-gray-500 space-y-2">
+          <div className="text-sm text-muted-foreground space-y-2">
             <p className="font-medium">Instructions:</p>
             <ol className="list-decimal list-inside space-y-1">
               <li>Copy the wallet address above</li>
@@ -230,7 +230,7 @@ function CryptoPaymentContent() {
           </div>
 
           {/* Reference */}
-          <div className="text-xs text-gray-400 text-center">
+          <div className="text-xs text-muted-foreground text-center">
             Reference: {reference}
           </div>
         </CardContent>
@@ -242,7 +242,7 @@ function CryptoPaymentContent() {
 export default function CryptoPaymentPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
       </div>
     }>

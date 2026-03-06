@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Shield, LogOut, BarChart3, Zap, CreditCard, Users, Bell, Settings, Sun } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { toast } from 'sonner';
 import { AdminAnalytics } from '@/components/admin-analytics';
 import { AdminSmsSettings } from '@/components/admin-sms-settings';
@@ -119,9 +120,12 @@ export default function AdminPage() {
               <p className="text-xs text-muted-foreground">ArmogridSolar Management</p>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" />Logout
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />Logout
+            </Button>
+          </div>
         </div>
       </header>
 

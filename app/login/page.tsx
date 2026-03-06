@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Zap } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -54,6 +55,10 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-armogrid-navy via-armogrid-blue to-armogrid-navy flex items-center justify-center p-4">
+      {/* Theme toggle fixed to top-right */}
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle className="text-white hover:text-white hover:bg-white/10" />
+      </div>
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -65,7 +70,7 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <Card className="shadow-2xl border-white/20 bg-white/95 backdrop-blur-xl">
+        <Card className="shadow-2xl border-white/20 bg-white/95 dark:bg-slate-900/95 dark:border-white/10 backdrop-blur-xl">
           <CardHeader className="space-y-2">
             <CardTitle className="text-3xl font-bold">Welcome Back</CardTitle>
             <CardDescription className="text-base">
@@ -81,7 +86,7 @@ export default function LoginPage() {
                   onClick={() => setUserType(1)}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                     userType === 1
-                      ? 'bg-white text-foreground shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
@@ -92,7 +97,7 @@ export default function LoginPage() {
                   onClick={() => setUserType(0)}
                   className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
                     userType === 0
-                      ? 'bg-white text-foreground shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-foreground shadow-sm'
                       : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >

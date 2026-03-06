@@ -514,88 +514,88 @@ export function AdminAnalytics() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200 dark:from-green-950/40 dark:to-green-900/20 dark:border-green-800/50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-green-600">Total Revenue</p>
-                <p className="text-2xl font-bold text-green-700">
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">Total Revenue</p>
+                <p className="text-2xl font-bold text-green-700 dark:text-green-300">
                   {formatCurrency(analytics.totalRevenue)}
                 </p>
-                <p className="text-xs text-green-600 mt-1">
+                <p className="text-xs text-green-600 dark:text-green-500 mt-1">
                   {analytics.revenueByDay.length} days with transactions
                 </p>
               </div>
-              <div className="p-3 bg-green-200 rounded-full">
-                <DollarSign className="w-6 h-6 text-green-700" />
+              <div className="p-3 bg-green-200 dark:bg-green-800/50 rounded-full">
+                <DollarSign className="w-6 h-6 text-green-700 dark:text-green-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 dark:from-blue-950/40 dark:to-blue-900/20 dark:border-blue-800/50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-blue-600">Total Energy</p>
-                <p className="text-2xl font-bold text-blue-700">
+                <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Total Energy</p>
+                <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
                   {formatEnergy(analytics.totalEnergy)}
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-blue-600 dark:text-blue-500 mt-1">
                   Consumed this period
                 </p>
               </div>
-              <div className="p-3 bg-blue-200 rounded-full">
-                <Zap className="w-6 h-6 text-blue-700" />
+              <div className="p-3 bg-blue-200 dark:bg-blue-800/50 rounded-full">
+                <Zap className="w-6 h-6 text-blue-700 dark:text-blue-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200 dark:from-orange-950/40 dark:to-orange-900/20 dark:border-orange-800/50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-orange-600">Live Power</p>
-                <p className="text-2xl font-bold text-orange-700">
+                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Live Power</p>
+                <p className="text-2xl font-bold text-orange-700 dark:text-orange-300">
                   {formatPower(analytics.livePower)}
                 </p>
-                <p className="text-xs text-orange-600 mt-1">
+                <p className="text-xs text-orange-600 dark:text-orange-500 mt-1">
                   Current draw across all meters
                 </p>
               </div>
-              <div className="p-3 bg-orange-200 rounded-full">
-                <Activity className="w-6 h-6 text-orange-700" />
+              <div className="p-3 bg-orange-200 dark:bg-orange-800/50 rounded-full">
+                <Activity className="w-6 h-6 text-orange-700 dark:text-orange-400" />
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 dark:from-purple-950/40 dark:to-purple-900/20 dark:border-purple-800/50">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-purple-600">Meter Status</p>
-                <p className="text-2xl font-bold text-purple-700">
+                <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Meter Status</p>
+                <p className="text-2xl font-bold text-purple-700 dark:text-purple-300">
                   {analytics.meterStatus.total} Total
                 </p>
                 <div className="flex gap-3 mt-2 text-xs">
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span className="text-emerald-700">{analytics.meterStatus.normal} Normal</span>
+                    <span className="text-emerald-700 dark:text-emerald-400">{analytics.meterStatus.normal} Normal</span>
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-gray-400"></span>
-                    <span className="text-gray-600">{analytics.meterStatus.offline} Offline</span>
+                    <span className="text-muted-foreground">{analytics.meterStatus.offline} Offline</span>
                   </span>
                   <span className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-cyan-500"></span>
-                    <span className="text-cyan-700">{analytics.meterStatus.alarm} Alarm</span>
+                    <span className="text-cyan-700 dark:text-cyan-400">{analytics.meterStatus.alarm} Alarm</span>
                   </span>
                 </div>
               </div>
-              <div className="p-3 bg-purple-200 rounded-full">
-                <Users className="w-6 h-6 text-purple-700" />
+              <div className="p-3 bg-purple-200 dark:bg-purple-800/50 rounded-full">
+                <Users className="w-6 h-6 text-purple-700 dark:text-purple-400" />
               </div>
             </div>
           </CardContent>
@@ -641,7 +641,7 @@ export function AdminAnalytics() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex flex-col justify-center space-y-4">
-                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-50">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-emerald-500/10">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full bg-emerald-500" />
                     <span className="font-medium">Normal (PCS)</span>
@@ -655,21 +655,21 @@ export function AdminAnalytics() {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full bg-gray-400" />
                     <span className="font-medium">Offline (PCS)</span>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-gray-700">{analytics.meterStatus.offline}</span>
-                    <span className="text-sm text-gray-600 ml-2">
+                    <span className="font-bold text-muted-foreground">{analytics.meterStatus.offline}</span>
+                    <span className="text-sm text-muted-foreground ml-2">
                       {analytics.meterStatus.total > 0 
                         ? ((analytics.meterStatus.offline / analytics.meterStatus.total) * 100).toFixed(1) 
                         : 0}%
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-3 rounded-lg bg-cyan-50">
+                <div className="flex items-center justify-between p-3 rounded-lg bg-cyan-500/10">
                   <div className="flex items-center gap-2">
                     <div className="w-4 h-4 rounded-full bg-cyan-500" />
                     <span className="font-medium">Alarm (PCS)</span>
@@ -1135,9 +1135,9 @@ export function AdminAnalytics() {
               <div className="space-y-2">
                 {analytics.lowBalanceMeters.length > 0 ? (
                   analytics.lowBalanceMeters.map((meter) => (
-                    <div key={meter.meterId} className="flex items-center justify-between p-2 rounded-lg bg-yellow-50">
+                    <div key={meter.meterId} className="flex items-center justify-between p-2 rounded-lg bg-yellow-500/10">
                       <span className="font-medium text-sm">{meter.roomNo}</span>
-                      <span className="font-mono text-sm text-yellow-700">
+                      <span className="font-mono text-sm text-yellow-700 dark:text-yellow-400">
                         {formatCurrency(meter.balance)}
                       </span>
                     </div>
@@ -1168,7 +1168,7 @@ export function AdminAnalytics() {
               <div className="space-y-2">
                 {analytics.forcedModeMeters.length > 0 ? (
                   analytics.forcedModeMeters.map((meter) => (
-                    <div key={meter.meterId} className="flex items-center justify-between p-2 rounded-lg bg-purple-50">
+                    <div key={meter.meterId} className="flex items-center justify-between p-2 rounded-lg bg-purple-500/10">
                       <span className="font-medium text-sm">{meter.roomNo}</span>
                       <Badge className={meter.controlMode === 'forced_on' ? 'bg-orange-500' : 'bg-purple-500'}>
                         {meter.controlMode === 'forced_on' ? 'Forced ON' : 'Forced OFF'}
@@ -1190,7 +1190,7 @@ export function AdminAnalytics() {
               <WifiOff className="w-5 h-5 text-red-500" />
               Offline Meters
               {analytics.offlineMeters.length > 0 && (
-                <Badge variant="secondary" className="ml-auto bg-red-100 text-red-700">
+                <Badge variant="secondary" className="ml-auto bg-red-500/10 text-red-700 dark:text-red-400">
                   {analytics.offlineMeters.length}
                 </Badge>
               )}
@@ -1201,7 +1201,7 @@ export function AdminAnalytics() {
               <div className="space-y-2">
                 {analytics.offlineMeters.length > 0 ? (
                   analytics.offlineMeters.map((meter) => (
-                    <div key={meter.meterId} className="flex items-center justify-between p-2 rounded-lg bg-red-50">
+                    <div key={meter.meterId} className="flex items-center justify-between p-2 rounded-lg bg-red-500/10">
                       <span className="font-medium text-sm">{meter.roomNo}</span>
                       <Badge variant="destructive">Offline</Badge>
                     </div>

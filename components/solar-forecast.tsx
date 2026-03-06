@@ -224,10 +224,10 @@ export function SolarForecastWidget({ projectId }: SolarForecastProps) {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Tomorrow's Solar */}
         <Card className={`border-l-4 ${
-          tomorrowForecast?.advisory_level === 'critical' ? 'border-l-red-500 bg-red-50/50' :
-          tomorrowForecast?.advisory_level === 'very_low' ? 'border-l-orange-500 bg-orange-50/50' :
-          tomorrowForecast?.advisory_level === 'low' ? 'border-l-yellow-500 bg-yellow-50/50' :
-          'border-l-emerald-500 bg-emerald-50/50'
+          tomorrowForecast?.advisory_level === 'critical' ? 'border-l-red-500 bg-red-500/5' :
+          tomorrowForecast?.advisory_level === 'very_low' ? 'border-l-orange-500 bg-orange-500/5' :
+          tomorrowForecast?.advisory_level === 'low' ? 'border-l-yellow-500 bg-yellow-500/5' :
+          'border-l-emerald-500 bg-emerald-500/5'
         }`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
@@ -483,7 +483,7 @@ export function SolarForecastWidget({ projectId }: SolarForecastProps) {
                     return (
                       <tr
                         key={f.id || f.forecast_date}
-                        className={`border-b hover:bg-muted/50 ${isToday ? 'bg-blue-50/50' : isTomorrow ? 'bg-yellow-50/50' : ''}`}
+                        className={`border-b hover:bg-muted/50 ${isToday ? 'bg-blue-500/5' : isTomorrow ? 'bg-yellow-500/5' : ''}`}
                       >
                         <td className="py-2 px-3">
                           <div className="flex items-center gap-2">

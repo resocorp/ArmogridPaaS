@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { Zap, Shield, TrendingUp, Clock, Info, UserPlus, MapPin, Phone, Mail, User, Home, MessageCircle } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -323,11 +324,14 @@ export default function HomePage() {
             </div>
             <span className="text-2xl font-bold text-white">ArmogridSolar</span>
           </div>
-          <Link href="/login">
-            <Button className="bg-white text-armogrid-navy hover:bg-white/90 shadow-lg font-semibold">
-              Sign In
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle className="text-white hover:text-white hover:bg-white/10" />
+            <Link href="/login">
+              <Button className="bg-white text-armogrid-navy hover:bg-white/90 shadow-lg font-semibold dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:border dark:border-white/20">
+                Sign In
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -335,7 +339,7 @@ export default function HomePage() {
       <main className="container mx-auto px-4 py-8 lg:py-16">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Quick Recharge/Signup Card - Shows FIRST on mobile */}
-          <Card className="shadow-2xl border-white/20 bg-white/95 backdrop-blur-xl order-first lg:order-last">
+          <Card className="shadow-2xl border-white/20 bg-white/95 dark:bg-slate-900/95 dark:border-white/10 backdrop-blur-xl order-first lg:order-last">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <CardHeader className="space-y-4 pb-4">
                 <TabsList className="grid w-full grid-cols-2">
@@ -375,7 +379,7 @@ export default function HomePage() {
                         required
                       />
                       {meterValidation.isValidating && (
-                        <p className="text-xs text-gray-500">Validating meter...</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Validating meter...</p>
                       )}
                       {!meterValidation.isValidating && meterValidation.found === true && (
                         <p className="text-xs text-green-600">
@@ -404,24 +408,24 @@ export default function HomePage() {
                     </div>
 
                     {feeCalculation && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 space-y-2">
+                      <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/50 rounded-lg p-3 space-y-2">
                         <div className="flex items-start gap-2">
-                          <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                          <Info className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
                           <div className="flex-1 space-y-1">
-                            <p className="text-sm font-medium text-blue-900">Payment Breakdown</p>
+                            <p className="text-sm font-medium text-blue-900 dark:text-blue-200">Payment Breakdown</p>
                             <div className="space-y-1 text-sm">
                               <div className="flex justify-between">
-                                <span className="text-gray-600">Recharge:</span>
+                                <span className="text-gray-600 dark:text-gray-400">Recharge:</span>
                                 <span className="font-medium">₦{feeCalculation.rechargeAmount.toLocaleString()}</span>
                               </div>
                               <div className="flex justify-between">
-                                <span className="text-gray-600">Fee ({feeCalculation.feeDescription}):</span>
+                                <span className="text-gray-600 dark:text-gray-400">Fee ({feeCalculation.feeDescription}):</span>
                                 <span className="font-medium">₦{feeCalculation.fee.toLocaleString()}</span>
                               </div>
-                              <div className="border-t border-blue-200 pt-1 mt-1">
+                              <div className="border-t border-blue-200 dark:border-blue-800/50 pt-1 mt-1">
                                 <div className="flex justify-between">
-                                  <span className="font-semibold text-blue-900">Total:</span>
-                                  <span className="font-bold text-blue-900">₦{feeCalculation.totalAmount.toLocaleString()}</span>
+                                  <span className="font-semibold text-blue-900 dark:text-blue-200">Total:</span>
+                                  <span className="font-bold text-blue-900 dark:text-blue-200">₦{feeCalculation.totalAmount.toLocaleString()}</span>
                                 </div>
                               </div>
                             </div>
@@ -539,7 +543,7 @@ export default function HomePage() {
                         required
                       />
                       {roomCount > 1 && (
-                        <p className="text-xs text-blue-600 font-medium">
+                        <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">
                           {roomCount} rooms selected
                         </p>
                       )}

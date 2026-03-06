@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Zap, Gauge, TrendingUp, Receipt, LogOut, Menu, X } from 'lucide-react';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useSessionMonitor } from '@/lib/hooks/use-session-monitor';
@@ -97,6 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <span className="text-sm font-medium">{username}</span>
               </div>
             )}
+            <ThemeToggle />
             <Button variant="ghost" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
               <span className="hidden sm:inline">Logout</span>

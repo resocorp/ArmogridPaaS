@@ -6,6 +6,7 @@ import { CheckCircle2, Phone, MessageCircle, Home, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 const CONTACT_PHONE = '+2347035090096';
 
@@ -17,9 +18,12 @@ function SuccessContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-armogrid-navy via-armogrid-blue to-armogrid-navy flex items-center justify-center p-4">
-      <Card className="max-w-lg w-full shadow-2xl border-white/20 bg-white/95 backdrop-blur-xl">
+      <div className="fixed top-4 right-4 z-50">
+        <ThemeToggle className="text-white hover:text-white hover:bg-white/10" />
+      </div>
+      <Card className="max-w-lg w-full shadow-2xl border-white/20 bg-white/95 dark:bg-slate-900/95 dark:border-white/10 backdrop-blur-xl">
         <CardHeader className="text-center pb-2">
-          <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-4">
+          <div className="mx-auto w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mb-4">
             <CheckCircle2 className="w-12 h-12 text-green-600" />
           </div>
           <CardTitle className="text-2xl font-bold text-green-600">
@@ -35,8 +39,8 @@ function SuccessContent() {
               Your registration has been received successfully.
             </p>
             {isFree && (
-              <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
-                <p className="text-sm text-green-700 font-medium">
+              <div className="bg-green-500/10 border border-green-200 dark:border-green-800 rounded-lg p-3 mt-3">
+                <p className="text-sm text-green-700 dark:text-green-400 font-medium">
                   🎉 Your meter is FREE! Just get your electrician to run the connection to the meter.
                 </p>
               </div>
@@ -49,30 +53,30 @@ function SuccessContent() {
           </div>
 
           {/* Next Steps */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-blue-900 flex items-center gap-2">
+          <div className="bg-blue-500/10 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold text-blue-900 dark:text-blue-300 flex items-center gap-2">
               <Zap className="w-5 h-5" />
               What Happens Next?
             </h3>
-            <ol className="space-y-2 text-sm text-blue-800">
+            <ol className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
               <li className="flex items-start gap-2">
-                <span className="bg-blue-200 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">1</span>
+                <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">1</span>
                 <span>Our team will review your registration details</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="bg-blue-200 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">2</span>
+                <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">2</span>
                 <span>You will be contacted within 24-48 hours to coordinate meter setup</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="bg-blue-200 text-blue-800 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">3</span>
+                <span className="bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 rounded-full w-5 h-5 flex items-center justify-center flex-shrink-0 text-xs font-bold">3</span>
                 <span>Get your electrician to run the connection to the meter, then start recharging!</span>
               </li>
             </ol>
           </div>
 
           {/* Contact Information */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
-            <h3 className="font-semibold text-gray-900">
+          <div className="bg-muted/50 border border-border rounded-lg p-4 space-y-3">
+            <h3 className="font-semibold">
               Questions? Contact Us
             </h3>
             <div className="space-y-2">
@@ -80,26 +84,26 @@ function SuccessContent() {
                 href={`https://wa.me/${CONTACT_PHONE.replace('+', '')}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-3 bg-green-500/10 hover:bg-green-500/20 rounded-lg transition-colors"
               >
                 <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
                   <MessageCircle className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium text-green-800">WhatsApp</p>
-                  <p className="text-sm text-green-600">{CONTACT_PHONE}</p>
+                  <p className="font-medium text-green-700 dark:text-green-400">WhatsApp</p>
+                  <p className="text-sm text-green-600 dark:text-green-500">{CONTACT_PHONE}</p>
                 </div>
               </a>
               <a 
                 href={`tel:${CONTACT_PHONE}`}
-                className="flex items-center gap-3 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                className="flex items-center gap-3 p-3 bg-blue-500/10 hover:bg-blue-500/20 rounded-lg transition-colors"
               >
                 <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
                   <Phone className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <p className="font-medium text-blue-800">Call Us</p>
-                  <p className="text-sm text-blue-600">{CONTACT_PHONE}</p>
+                  <p className="font-medium text-blue-700 dark:text-blue-400">Call Us</p>
+                  <p className="text-sm text-blue-600 dark:text-blue-500">{CONTACT_PHONE}</p>
                 </div>
               </a>
             </div>

@@ -448,7 +448,7 @@ export default function AnalyticsPage() {
                     <p className="text-xl font-bold">{weekComparison.lastWeek.toFixed(2)} kWh</p>
                   </div>
                   <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                    weekComparison.isIncrease ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-600'
+                    weekComparison.isIncrease ? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400' : 'bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400'
                   }`}>
                     {weekComparison.isIncrease ? (
                       <TrendingUp className="w-5 h-5" />

@@ -633,14 +633,14 @@ export function AdminSmsSettings() {
                   Send Test SMS
                 </Button>
                 {testResult && (
-                  <div className={`p-3 rounded-lg ${testResult.success ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'} border`}>
+                  <div className={`p-3 rounded-lg border ${testResult.success ? 'bg-green-500/10 border-green-200 dark:border-green-800' : 'bg-red-500/10 border-red-200 dark:border-red-800'}`}>
                     <div className="flex items-center gap-2">
                       {testResult.success ? (
                         <CheckCircle2 className="w-4 h-4 text-green-500" />
                       ) : (
                         <XCircle className="w-4 h-4 text-red-500" />
                       )}
-                      <span className={testResult.success ? 'text-green-700' : 'text-red-700'}>
+                      <span className={testResult.success ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>
                         {testResult.message}
                       </span>
                     </div>

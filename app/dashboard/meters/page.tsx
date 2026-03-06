@@ -21,9 +21,9 @@ const REFRESH_INTERVAL = 10 * 60 * 1000;
 
 // Usage level thresholds (in watts)
 const getUsageLevel = (powerWatts: number) => {
-  if (powerWatts < 200) return { color: 'emerald', bgClass: 'bg-emerald-50', textClass: 'text-emerald-600', borderClass: 'border-emerald-200', label: 'Low' };
-  if (powerWatts < 800) return { color: 'amber', bgClass: 'bg-amber-50', textClass: 'text-amber-600', borderClass: 'border-amber-200', label: 'Moderate' };
-  return { color: 'red', bgClass: 'bg-red-50', textClass: 'text-red-600', borderClass: 'border-red-200', label: 'High' };
+  if (powerWatts < 200) return { color: 'emerald', bgClass: 'bg-emerald-500/10', textClass: 'text-emerald-600 dark:text-emerald-400', borderClass: 'border-emerald-200 dark:border-emerald-800', label: 'Low' };
+  if (powerWatts < 800) return { color: 'amber', bgClass: 'bg-amber-500/10', textClass: 'text-amber-600 dark:text-amber-400', borderClass: 'border-amber-200 dark:border-amber-800', label: 'Moderate' };
+  return { color: 'red', bgClass: 'bg-red-500/10', textClass: 'text-red-600 dark:text-red-400', borderClass: 'border-red-200 dark:border-red-800', label: 'High' };
 };
 
 export default function MetersPage() {
@@ -434,8 +434,7 @@ export default function MetersPage() {
                   <div className={cn(
                     "rounded-xl p-4 border",
                     usageLevel.bgClass,
-                    usageLevel.borderClass,
-                    "dark:bg-opacity-20"
+                    usageLevel.borderClass
                   )}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
@@ -489,7 +488,7 @@ export default function MetersPage() {
                         {formatNaira(balance * 100)}
                       </p>
                     </div>
-                    <Button size="sm" className="bg-gray-900 hover:bg-gray-800 text-white" onClick={() => startRecharge(meter.meterId)}>
+                    <Button size="sm" className="bg-gray-900 hover:bg-gray-800 dark:bg-primary dark:hover:bg-primary/90 text-white" onClick={() => startRecharge(meter.meterId)}>
                       Buy Credit
                     </Button>
                   </div>

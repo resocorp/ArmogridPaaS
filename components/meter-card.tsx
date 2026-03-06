@@ -55,7 +55,7 @@ export function MeterCard({ meter, className, onMeterUpdate }: MeterCardProps) {
         {/* Balance */}
         <div>
           <p className="text-sm text-muted-foreground">Balance</p>
-          <p className="text-2xl font-bold text-armogrid-navy">
+          <p className="text-2xl font-bold text-armogrid-navy dark:text-foreground">
             {formatNaira(balance * 100)}
           </p>
         </div>

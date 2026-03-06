@@ -235,7 +235,7 @@ export function AdminMetersTab({ projects, projectsLoading, onLoadProjects }: Ad
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             {meter.roomNo}
-                            {linkedData?.linked && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200"><Link2 className="w-3 h-3 mr-1" />Linked</Badge>}
+                            {linkedData?.linked && <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800"><Link2 className="w-3 h-3 mr-1" />Linked</Badge>}
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">{meter.projectName || '-'}</TableCell>
@@ -245,7 +245,7 @@ export function AdminMetersTab({ projects, projectsLoading, onLoadProjects }: Ad
                         <TableCell>{getMeterStatusBadge(displayStatus)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
-                            {meterData && <Button variant="outline" size="sm" title="Electrical Details" onClick={() => { setDetailsMeter({ ...meter, ...meterData }); setDetailsDialogOpen(true); }} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"><Info className="w-4 h-4" /></Button>}
+                            {meterData && <Button variant="outline" size="sm" title="Electrical Details" onClick={() => { setDetailsMeter({ ...meter, ...meterData }); setDetailsDialogOpen(true); }} className="text-blue-600 hover:text-blue-700 hover:bg-blue-500/10"><Info className="w-4 h-4" /></Button>}
                             <Button variant={linkedData?.linked ? 'default' : 'outline'} size="sm" onClick={() => openLinkDialog(meter)} className={linkedData?.linked ? 'bg-green-600 hover:bg-green-700' : ''}><KeyRound className="w-4 h-4" /></Button>
                             <Button variant="outline" size="sm" onClick={() => { setSelectedMeter(meter); setControlDialogOpen(true); }} disabled={!meter.meterId}><Power className="w-4 h-4" /></Button>
                             <Button variant="outline" size="sm" onClick={() => { setSelectedMeter(meter); setRechargeDialogOpen(true); }} disabled={!meter.meterId}><Wallet className="w-4 h-4" /></Button>
@@ -305,9 +305,9 @@ export function AdminMetersTab({ projects, projectsLoading, onLoadProjects }: Ad
               </div>
             </div>
             {linkedCredentials[selectedMeter?.roomNo || '']?.linked && (
-              <div className="rounded-md bg-green-50 border border-green-200 p-3">
-                <div className="flex items-center gap-2 text-green-700 text-sm"><CheckCircle2 className="w-4 h-4" /><span>This meter is already linked. Saving will update credentials.</span></div>
-                <p className="text-xs text-green-600 mt-1">Last synced: {linkedCredentials[selectedMeter?.roomNo || '']?.lastSyncAt ? format(new Date(linkedCredentials[selectedMeter?.roomNo || '']?.lastSyncAt), 'MMM d, yyyy HH:mm') : 'Never'}</p>
+              <div className="rounded-md bg-green-500/10 border border-green-200 dark:border-green-800 p-3">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm"><CheckCircle2 className="w-4 h-4" /><span>This meter is already linked. Saving will update credentials.</span></div>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">Last synced: {linkedCredentials[selectedMeter?.roomNo || '']?.lastSyncAt ? format(new Date(linkedCredentials[selectedMeter?.roomNo || '']?.lastSyncAt), 'MMM d, yyyy HH:mm') : 'Never'}</p>
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Zap, ChevronDown, ChevronUp, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 interface FAQItem {
   question: string;
@@ -109,12 +110,15 @@ export default function FAQsPage() {
             </div>
             <span className="text-2xl font-bold text-white">ArmogridSolar</span>
           </Link>
-          <Link href="/">
-            <Button className="bg-white/10 text-white border border-white/20 hover:bg-white/20">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle className="text-white hover:text-white hover:bg-white/10" />
+            <Link href="/">
+              <Button className="bg-white/10 text-white border border-white/20 hover:bg-white/20">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
