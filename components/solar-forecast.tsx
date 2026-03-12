@@ -101,6 +101,9 @@ export function SolarForecastWidget({ projectId }: SolarForecastProps) {
   const [forecasts, setForecasts] = useState<ForecastDay[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(projectId || null);
   const [locationMap, setLocationMap] = useState<Record<string, { name: string; lat: number; lon: number }>>({});
+  const [locationCount, setLocationCount] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   const loadForecasts = async (refresh = false) => {
     let autoRefreshing = false;
@@ -116,20 +119,33 @@ export function SolarForecastWidget({ projectId }: SolarForecastProps) {
       const data = await response.json();
 
       if (data.success) {
+        setFetchError(null);
         setSummary(data.summary);
         const newForecasts = data.forecasts || [];
         setForecasts(newForecasts);
         setLocationMap(data.locationMap || {});
+        if (data.locationCount !== undefined) setLocationCount(data.locationCount);
+        if (data.lastUpdated) setLastUpdated(data.lastUpdated);
         if (refresh && newForecasts.length > 0) toast.success('Solar forecast refreshed');
-        // Auto-refresh from API if initial load returned empty (DB has no cached data yet)
-        if (!refresh && newForecasts.length === 0) {
-          autoRefreshing = true;
-          setIsLoading(false);
-          loadForecasts(true);
-          return;
+
+        // Auto-refresh conditions (only on initial non-refresh load):
+        // 1. DB returned no forecasts at all
+        // 2. Fewer than 2 future days remain (data about to expire)
+        if (!refresh) {
+          const todayStr = new Date().toISOString().split('T')[0];
+          const futureDaysCount = newForecasts.filter((f: ForecastDay) => f.forecast_date >= todayStr).length;
+          if (newForecasts.length === 0 || futureDaysCount < 2) {
+            autoRefreshing = true;
+            setIsLoading(false);
+            // Keep existing (stale) data visible while refreshing in background
+            loadForecasts(true);
+            return;
+          }
         }
       } else {
-        toast.error(data.error || 'Failed to load solar forecast');
+        const errMsg = data.error || 'Failed to load solar forecast';
+        setFetchError(errMsg);
+        toast.error(errMsg);
       }
     } catch (error) {
       console.error('Solar forecast error:', error);
@@ -146,13 +162,16 @@ export function SolarForecastWidget({ projectId }: SolarForecastProps) {
     loadForecasts();
   }, [selectedProject]);
 
-  if (isLoading) {
+  // Show full-page spinner during initial load or auto-refresh when there is no data to show
+  if (isLoading || (isRefreshing && forecasts.length === 0)) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center h-48">
           <div className="text-center">
             <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-yellow-500" />
-            <p className="text-sm text-muted-foreground">Loading solar forecast...</p>
+            <p className="text-sm text-muted-foreground">
+              {isRefreshing ? 'Fetching fresh forecast from OpenWeatherMap...' : 'Loading solar forecast...'}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -184,11 +203,26 @@ export function SolarForecastWidget({ projectId }: SolarForecastProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-6 text-muted-foreground">
-            <Sun className="w-10 h-10 mx-auto mb-2 opacity-40" />
-            <p>No solar forecast data available</p>
-            <p className="text-xs mt-1">Click &quot;Fetch Forecast&quot; to load weather data, or configure solar project locations in admin settings</p>
-          </div>
+          {fetchError ? (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
+              <p className="font-semibold mb-1">Forecast fetch failed</p>
+              <p>{fetchError}</p>
+            </div>
+          ) : (
+            <div className="text-center py-6 text-muted-foreground">
+              <Sun className="w-10 h-10 mx-auto mb-2 opacity-40" />
+              <p>No solar forecast data available</p>
+              {locationCount === 0 ? (
+                <p className="text-xs mt-1">
+                  No solar project locations configured. Add a location with GPS coordinates in the Solar Locations settings to enable forecasts.
+                </p>
+              ) : (
+                <p className="text-xs mt-1">
+                  Click &quot;Fetch Forecast&quot; to pull the latest 5-day weather forecast from OpenWeatherMap.
+                </p>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
     );
@@ -220,6 +254,19 @@ export function SolarForecastWidget({ projectId }: SolarForecastProps) {
 
   return (
     <div className="space-y-6">
+      {/* Refresh / last-updated status bar */}
+      {(isRefreshing || lastUpdated) && (
+        <div className="flex items-center justify-end gap-2 text-xs text-muted-foreground">
+          {isRefreshing ? (
+            <span className="flex items-center gap-1">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              Refreshing forecast in background…
+            </span>
+          ) : lastUpdated ? (
+            <span>Last updated: {format(new Date(lastUpdated), 'MMM d, h:mm a')}</span>
+          ) : null}
+        </div>
+      )}
       {/* Summary Cards Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Tomorrow's Solar */}

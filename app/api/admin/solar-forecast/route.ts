@@ -61,6 +61,8 @@ export async function GET(request: NextRequest) {
       extraSettings?.forEach((s: any) => { extraMap[s.key] = s.value; });
       const deratingFactor = parseFloat(extraMap.solar_derating_factor || '0.78');
 
+      const refreshErrors: string[] = [];
+
       if (locations && locations.length > 0) {
         for (const location of locations) {
           try {
@@ -112,10 +114,23 @@ export async function GET(request: NextRequest) {
                   { onConflict: 'project_id,forecast_date' }
                 );
             }
-          } catch (err) {
+          } catch (err: any) {
             console.error(`[SolarForecast] Failed to refresh forecast for ${location.project_name}:`, err);
+            refreshErrors.push(err.message || 'Unknown error');
           }
         }
+      }
+
+      // If every location failed during refresh, return the error immediately
+      if (refreshErrors.length > 0 && locations && refreshErrors.length === locations.length) {
+        const isAuthError = refreshErrors.some(e => e.toLowerCase().includes('unauthorized') || e.includes('401'));
+        return NextResponse.json({
+          success: false,
+          error: isAuthError
+            ? 'OpenWeatherMap API key is invalid or unauthorised. Please update it in Settings → OpenWeatherMap API Configuration.'
+            : `Failed to fetch weather data: ${refreshErrors[0]}`,
+          refreshErrors,
+        }, { status: 502 });
       }
     }
 
@@ -181,12 +196,25 @@ export async function GET(request: NextRequest) {
       lowSolarDaysAhead: forecasts?.filter((f: any) => f.advisory_level !== 'normal').length || 0,
     };
 
+    // Count all enabled locations (to distinguish "no locations" from "no data")
+    const { count: locationCount } = await supabaseAdmin
+      .from('solar_project_locations')
+      .select('*', { count: 'exact', head: true })
+      .eq('enabled', true);
+
+    // Determine when data was last fetched
+    const lastUpdated = forecasts && forecasts.length > 0
+      ? forecasts.reduce((latest: string, f: any) => f.updated_at > latest ? f.updated_at : latest, forecasts[0].updated_at)
+      : null;
+
     return NextResponse.json({
       success: true,
       summary,
       forecastsByProject,
       forecasts: forecasts || [],
       locationMap,
+      locationCount: locationCount ?? 0,
+      lastUpdated,
     });
   } catch (error: any) {
     if (error.message === 'Unauthorized' || error.message.includes('Admin')) {
